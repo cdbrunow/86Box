@@ -36,6 +36,7 @@
 #include <86box/ui.h>
 #include <86box/hdc.h>
 #include <86box/hdd.h>
+#include <86box/hdd_audio.h>
 
 #define MFM_TIME (TIMER_USEC * 10)
 
@@ -627,6 +628,12 @@ do_seek(mfm_t *mfm)
         drive->curcyl = mfm->cylinder;
     else
         drive->curcyl = drive->tracks - 1;
+
+    /* Drive sound. This controller doesn't go through hdd_seek_get_time(),
+       which is where seek sounds normally come from, so report the move
+       here, as hdc_st506_xt.c does. */
+    hdd_audio_seek(&hdd[drive->hdd_num], drive->curcyl);
+    hdd[drive->hdd_num].cur_cylinder = drive->curcyl;
 }
 
 static void
@@ -663,6 +670,8 @@ do_callback(void *priv)
                          mfm->drvsel, drive->steprate);
             drive->curcyl = 0;
             mfm->cylinder = 0;
+            hdd_audio_seek(&hdd[drive->hdd_num], 0);
+            hdd[drive->hdd_num].cur_cylinder = 0;
             mfm->status   = STAT_READY | STAT_DSC;
             irq_raise(mfm);
             break;
