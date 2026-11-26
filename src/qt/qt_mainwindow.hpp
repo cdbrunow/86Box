@@ -174,6 +174,8 @@ private slots:
 
     void on_actionACPI_Shutdown_triggered();
     void on_actionPower_off_triggered();
+    void on_actionPower_switch_triggered();
+    void on_actionKeep_window_open_when_powered_off_triggered();
 
 private slots:
     void on_actionShow_non_primary_monitors_triggered();

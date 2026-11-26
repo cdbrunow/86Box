@@ -585,6 +585,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->actionUpdate_status_bar_icons->setChecked(update_icons);
     ui->actionShow_USB_activity->setChecked(usb_activity);
     ui->actionFast_forward_on_start->setChecked(fast_forward_on_start);
+    ui->actionKeep_window_open_when_powered_off->setChecked(power_off_keep_window);
     ui->actionApply_fullscreen_stretch_mode_when_maximized->setChecked(video_fullscreen_scale_maximized);
 
 #ifdef Q_OS_MACOS
@@ -2812,6 +2813,11 @@ MainWindow::updateUiPauseState()
     ui->actionPause->setIcon(pause_icon);
     ui->actionPause->setToolTip(tooltip_text);
     ui->actionPause->setText(menu_text);
+
+    /* The power switch follows the machine, which a guest can also turn off */
+    const bool powered_on = !pc_is_powered_off();
+    ui->actionPower_switch->setChecked(powered_on);
+    ui->actionPower_switch->setToolTip(powered_on ? tr("Power off (the window stays open)") : tr("Power on"));
     emit vmmRunningStateChanged(static_cast<VMManagerProtocol::RunningState>(window_blocked ? (dopause ? VMManagerProtocol::RunningState::PausedWaiting : VMManagerProtocol::RunningState::RunningWaiting) : (VMManagerProtocol::RunningState) dopause));
 }
 
@@ -3137,6 +3143,36 @@ void
 MainWindow::on_actionACPI_Shutdown_triggered()
 {
     runctl_call_wait([](void *) { machine_power_button_press(); }, nullptr);
+}
+
+/* The power switch: off leaves the window open, on is a cold boot. */
+void
+MainWindow::on_actionPower_switch_triggered()
+{
+    if (pc_is_powered_off()) {
+        pc_power_on();
+        return;
+    }
+
+    if (confirm_exit && confirm_exit_cmdl) {
+        QMessageBox questionbox(QMessageBox::Icon::Warning, EMU_NAME, tr("Powering off the emulated machine may cause data loss. Are you sure you want to continue?"), QMessageBox::Yes | QMessageBox::No, this);
+        questionbox.setDefaultButton(QMessageBox::No);
+        questionbox.exec();
+        if (questionbox.result() != QMessageBox::Yes) {
+            updateUiPauseState(); /* undo the toggle's check change */
+            return;
+        }
+    }
+
+    /* On the CPU thread, between instructions, like a guest power-off */
+    runctl_call_wait([](void *) { pc_power_off_keep_window(); }, nullptr);
+}
+
+void
+MainWindow::on_actionKeep_window_open_when_powered_off_triggered()
+{
+    power_off_keep_window = ui->actionKeep_window_open_when_powered_off->isChecked() ? 1 : 0;
+    config_save_global_setting("Emulator", "power_off_keep_window");
 }
 
 /* A hard power off is equivalent to exiting 86Box. */

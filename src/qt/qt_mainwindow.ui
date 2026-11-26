@@ -99,6 +99,8 @@
     <addaction name="actionNon_maskable_interrupt"/>
     <addaction name="separator"/>
     <addaction name="actionACPI_Shutdown"/>
+    <addaction name="actionPower_switch"/>
+    <addaction name="actionKeep_window_open_when_powered_off"/>
     <addaction name="actionPower_off"/>
     <addaction name="actionExit"/>
    </widget>
@@ -313,6 +315,7 @@
    <addaction name="actionFast_forward"/>
    <addaction name="actionHard_Reset"/>
    <addaction name="actionACPI_Shutdown"/>
+   <addaction name="actionPower_switch"/>
    <addaction name="separator"/>
    <addaction name="actionCtrl_Alt_Del"/>
    <addaction name="actionCtrl_Alt_Esc"/>
@@ -361,6 +364,32 @@
    </property>
    <property name="text">
     <string>&amp;Right CTRL is left ALT</string>
+   </property>
+  </action>
+  <action name="actionPower_switch">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../qt_resources.qrc">
+     <normaloff>:/menuicons/qt/icons/acpi_shutdown.ico</normaloff>:/menuicons/qt/icons/acpi_shutdown.ico</iconset>
+   </property>
+   <property name="text">
+    <string>Po&amp;wer</string>
+   </property>
+   <property name="toolTip">
+    <string>Power off (the window stays open)</string>
+   </property>
+  </action>
+  <action name="actionKeep_window_open_when_powered_off">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Keep window open when powered off</string>
    </property>
   </action>
   <action name="actionHard_Reset">
