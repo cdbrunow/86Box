@@ -1491,9 +1491,11 @@ sound_hdd_thread_end(void)
  * The ambient sound thread. Same shape as sound_hdd_thread() above: render
  * a 20 ms block, hand it to the backend, then sleep until it's time for the
  * next one, measured against the wall clock so the sound keeps real time
- * whatever the emulation speed. While paused it outputs nothing; the
- * sources keep their playback positions, so they resume where they left
- * off. ambient.c starts and stops it as sources come and go.
+ * whatever the emulation speed. While paused it outputs nothing, unless a
+ * source asks to be heard (the fan's power-off spin-down plays after
+ * emulation has stopped); the other sources keep their playback positions,
+ * so they resume where they left off. ambient.c starts and stops it as
+ * sources come and go.
  */
 static void
 sound_ambient_thread(UNUSED(void *param))
@@ -1503,20 +1505,20 @@ sound_ambient_thread(UNUSED(void *param))
     uint64_t frames_rendered = 0;
 
     while (ambientaudioon) {
-        if (dopause) {
+        /* One block at the output rate: 960 frames at 48 kHz, 882 at 44.1 */
+        static float   ambient_float_buffer[SOUNDBUFLEN * 2];
+        static int16_t ambient_int16_buffer[SOUNDBUFLEN * 2];
+        const int      frames  = sound_sample_rate / 50;
+        const int      paused  = dopause;
+        const int      audible = ambient_render(ambient_float_buffer, frames, paused);
+
+        if (paused && !audible) {
             thread_wait_event(sound_ambient_event, 50);
             thread_reset_event(sound_ambient_event);
             start_time      = plat_get_ticks();
             frames_rendered = 0;
             continue;
         }
-
-        /* One block at the output rate: 960 frames at 48 kHz, 882 at 44.1 */
-        static float   ambient_float_buffer[SOUNDBUFLEN * 2];
-        static int16_t ambient_int16_buffer[SOUNDBUFLEN * 2];
-        const int      frames = sound_sample_rate / 50;
-
-        ambient_render(ambient_float_buffer, frames);
 
         if (sound_is_float)
             givealbuffer_ambient(ambient_float_buffer, frames * 2);

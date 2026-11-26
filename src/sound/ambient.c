@@ -116,16 +116,33 @@ ambient_close(void)
 }
 
 void
-ambient_render(float *buf, int frames)
+ambient_lock(void)
 {
+    if (ambient_mutex == NULL)
+        ambient_mutex = thread_create_mutex();
+
+    thread_wait_mutex(ambient_mutex);
+}
+
+void
+ambient_unlock(void)
+{
+    thread_release_mutex(ambient_mutex);
+}
+
+int
+ambient_render(float *buf, int frames, int paused)
+{
+    int audible = 0;
+
     memset(buf, 0, frames * 2 * sizeof(float));
 
     if (ambient_mutex == NULL)
-        return;
+        return 0;
 
     thread_wait_mutex(ambient_mutex);
     for (int i = 0; i < source_count; i++)
-        sources[i].render(buf, frames, sources[i].priv);
+        audible |= sources[i].render(buf, frames, paused, sources[i].priv);
     thread_release_mutex(ambient_mutex);
 
     /* Several loud sources can add up past full scale */
@@ -135,5 +152,7 @@ ambient_render(float *buf, int frames)
         else if (buf[i] < -1.0f)
             buf[i] = -1.0f;
     }
+
+    return audible;
 }
 

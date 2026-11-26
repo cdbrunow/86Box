@@ -28,13 +28,15 @@ Anything placed after MIDI would never get an output.
 ## How a block of sound is made
 
 ```
-sound_ambient_thread (sound.c)         every 20 ms, unless paused
-  └─ ambient_render(buf, frames)       ambient.c
+sound_ambient_thread (sound.c)         every 20 ms
+  └─ ambient_render(buf, frames, paused)   ambient.c
        ├─ zero buf
        ├─ lock ambient_mutex
-       │    └─ for each source: source->render(buf, frames, priv)  (adds)
+       │    └─ for each source: source->render(buf, frames, paused, priv)
+       │         (adds into buf; returns 1 if it must be heard while paused)
        ├─ unlock
        └─ clamp to -1.0 ... +1.0
+  └─ paused and nobody asked to be heard? → output nothing, sleep 50 ms
   └─ convert to int16 if Float32 sound is off
   └─ givealbuffer_ambient(...)         to the backend
 ```
@@ -61,12 +63,13 @@ guarantees the later phases rely on:
    and never will be again**, so its state can be freed straight away.
    Taking the lock waits out a render in progress.
 2. **A render function runs with the lock held**, so a source can share the
-   same mutex for its own state. Phase 3 will do exactly that, and so avoid
-   the kind of race that crashed `hdd_audio_reset()`.
+   same mutex for its own state through `ambient_lock()` /
+   `ambient_unlock()`. The fan (Phase 3) does exactly that, which avoids the
+   kind of race that crashed `hdd_audio_reset()`.
 
-The one rule for sources: **a render function must never call
-`ambient_register_source()` or `ambient_unregister_source()`.** The mutex
-isn't recursive, so it would deadlock.
+The one rule for sources: **never call `ambient_register_source()` or
+`ambient_unregister_source()` from a render function or while holding
+`ambient_lock()`.** The mutex isn't recursive, so it would deadlock.
 
 ## Start, stop, pause
 
@@ -77,7 +80,10 @@ isn't recursive, so it would deadlock.
   the thread to exit, and the thread takes the lock on every pass, so
   stopping while holding it would deadlock.
 - **Pause:** like the HDD thread, it outputs nothing while `dopause` is set.
-  Sources keep their positions, so a fan loop resumes mid-loop.
+  Sources keep their positions, so a fan loop resumes mid-loop. The one
+  exception: a source can return nonzero from its render function to be
+  heard anyway. *(Added in Phase 3: powering off stops emulation, which sets
+  `dopause`, and the fan's spin-down has to play after that.)*
 - **Timing** is wall-clock (`plat_get_ticks()`), so fast-forward doesn't
   speed sounds up. Phase 4's idle timer will use emulated time instead.
 - **Exit:** `pc_close()` calls `ambient_close()`, which drops every source and
