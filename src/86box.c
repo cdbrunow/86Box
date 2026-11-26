@@ -85,6 +85,7 @@
 #include <86box/hdd.h>
 #include <86box/hdd_audio.h>
 #include <86box/ambient.h>
+#include <86box/system_audio.h>
 #include <86box/hdc.h>
 #include <86box/hdc_ide.h>
 #include <86box/scsi.h>
@@ -1755,6 +1756,8 @@ pc_init_modules(void)
     hdd_audio_load_profiles();
     hdd_audio_init();
 
+    /* Only the profile list; the fan starts in pc_reset_hard_init() */
+    system_audio_load_profiles();
 
     sound_init();
 
@@ -2046,6 +2049,11 @@ pc_reset_hard_init(void)
     /* Reset HDD audio to pick up any profile changes */
     hdd_audio_reset();
 
+    /* Cold power-on: (re)load the fan profile and spin it up. Start-up comes
+       through here too. Warm resets (Ctrl+Alt+Del, the guest resetting the
+       CPU) don't, so the fan keeps running through them. */
+    system_audio_reset();
+
     /* Reset and reconfigure the SCSI layer. */
     scsi_card_init();
     usb_msd_hard_reset();
@@ -2204,6 +2212,7 @@ pc_close(UNUSED(thread_t *ptr))
        exit: the spin-down sounds are for power-off, not for closing the VM. */
     fdd_audio_close();
     hdd_audio_close();
+    system_audio_close();
     ambient_close();
 
     sound_close();

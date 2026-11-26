@@ -25,6 +25,7 @@
 #include <86box/path.h>
 #include <86box/plat.h>
 #include <86box/runctl.h>
+#include <86box/system_audio.h>
 #include <86box/ui.h>
 #include <86box/version.h>
 #include "cpu.h"
@@ -476,6 +477,10 @@ plat_power_off(void)
     hdd_image_sync_all();
     nvr_save();
     config_save();
+
+    /* Start the fan's spin-down, if there is one. It keeps playing after
+       emulation stops; this frontend stays open, so no need to wait. */
+    (void) system_audio_power_off();
 
     /* Deduct a sufficiently large number of cycles that no instructions will
        run before the main thread is terminated */

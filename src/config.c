@@ -63,6 +63,7 @@
 #include <86box/serial.h>
 #include <86box/hdd.h>
 #include <86box/hdd_audio.h>
+#include <86box/system_audio.h>
 #include <86box/hdc.h>
 #include <86box/hdc_ide.h>
 #include <86box/fdd.h>
@@ -747,6 +748,11 @@ load_machine(void)
     time_keep_date    = !!ini_section_get_int(cat, "time_keep_date", 0);
 
     pit_mode = ini_section_get_int(cat, "pit_mode", -1);
+
+    /* System fan sound: a profile internal_name, "none" for off */
+    p = ini_section_get_string(cat, "system_fan_audio_profile", "none");
+    strncpy(system_fan_audio_profile, p, sizeof(system_fan_audio_profile) - 1);
+    system_fan_audio_profile[sizeof(system_fan_audio_profile) - 1] = '\0';
 
     cpu_dyn_accurate_fpu_env = ini_section_get_int(cat, "cpu_dyn_accurate_fpu_env", 0);
     cpu_dyn_block_link = !!ini_section_get_int(cat, "cpu_dyn_block_link", 1);
@@ -3894,6 +3900,11 @@ save_machine(void)
         ini_section_delete_var(cat, "pit_mode");
     else
         ini_section_set_int(cat, "pit_mode", pit_mode);
+
+    if (!strcmp(system_fan_audio_profile, "none"))
+        ini_section_delete_var(cat, "system_fan_audio_profile");
+    else
+        ini_section_set_string(cat, "system_fan_audio_profile", system_fan_audio_profile);
 
     if (cpu_dyn_accurate_fpu_env == 0)
         ini_section_delete_var(cat, "cpu_dyn_accurate_fpu_env");
