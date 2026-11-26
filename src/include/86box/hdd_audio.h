@@ -48,6 +48,8 @@ typedef struct {
     hdd_audio_sample_config_t spindlemotor_loop;
     hdd_audio_sample_config_t spindlemotor_stop;
     hdd_audio_sample_config_t seek_track;
+    hdd_audio_sample_config_t seek_long;           /* optional: seeks of seek_long_cylinders or more */
+    uint32_t                  seek_long_cylinders; /* 0 = never use seek_long */
 } hdd_audio_profile_config_t;
 
 /* Functions for profile management */
@@ -75,6 +77,7 @@ extern hdd_spindle_state_t hdd_audio_get_drive_spindle_state(int hdd_index);
 extern void hdd_audio_spinup(void);
 extern void hdd_audio_spindown(void);
 extern hdd_spindle_state_t hdd_audio_get_spindle_state(void);
+
 
 #ifdef __cplusplus
 }

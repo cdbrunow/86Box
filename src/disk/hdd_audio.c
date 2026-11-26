@@ -36,10 +36,12 @@
 #define HDD_AUDIO_MAX_DRIVES 8
 
 typedef struct {
-    int   active;
-    int   position;
-    float volume;
-    int   profile_id;  /* Which profile's seek sound to use */
+    int            active;
+    int            position;
+    float          volume;
+    int            profile_id;  /* Which profile's seek sound to use */
+    const int16_t *buffer;      /* The seek sample this voice plays (short or long) */
+    int            samples;     /* Its length in frames */
 } hdd_seek_voice_t;
 
 /* Per-HDD audio state */
@@ -66,6 +68,9 @@ typedef struct {
     int16_t *seek_buffer;
     int      seek_samples;
     float    seek_volume;
+    int16_t *seek_long_buffer;
+    int      seek_long_samples;
+    float    seek_long_volume;
     int      loaded;
 } hdd_audio_samples_t;
 
@@ -180,6 +185,12 @@ hdd_audio_load_profiles(void)
         strncpy(config->seek_track.filename, file, sizeof(config->seek_track.filename) - 1);
         config->seek_track.volume = (float) ini_section_get_double(cat, "seek_track_volume", 1.0);
 
+        /* Optional long-seek sample, for seeks of seek_long_cylinders or more */
+        file = ini_section_get_string(cat, "seek_long_file", "");
+        strncpy(config->seek_long.filename, file, sizeof(config->seek_long.filename) - 1);
+        config->seek_long.volume    = (float) ini_section_get_double(cat, "seek_long_volume", 1.0);
+        config->seek_long_cylinders = ini_section_get_int(cat, "seek_long_cylinders", 0);
+
         hdd_audio_log("HDD Audio: Loaded profile %d: %s (%s)\n",
                       audio_profile_count, config->name, config->internal_name);
 
@@ -267,6 +278,10 @@ hdd_audio_close(void)
             free(profile_samples[i].seek_buffer);
             profile_samples[i].seek_buffer = NULL;
         }
+        if (profile_samples[i].seek_long_buffer) {
+            free(profile_samples[i].seek_long_buffer);
+            profile_samples[i].seek_long_buffer = NULL;
+        }
         profile_samples[i].loaded = 0;
     }
     
@@ -345,6 +360,15 @@ hdd_audio_load_profile_samples(int profile_id)
         } else {
             hdd_audio_log("HDD Audio: Failed to load seek sound: %s\n", config->seek_track.filename);
         }
+    }
+
+    /* Load long seek sound (optional) */
+    if (config->seek_long.filename[0]) {
+        samples->seek_long_buffer = sound_load_wav(config->seek_long.filename, &samples->seek_long_samples);
+        if (samples->seek_long_buffer)
+            samples->seek_long_volume = config->seek_long.volume;
+        else
+            samples->seek_long_samples = 0;
     }
     
     samples->loaded = 1;
@@ -457,6 +481,10 @@ hdd_audio_reset(void)
             free(profile_samples[i].seek_buffer);
             profile_samples[i].seek_buffer = NULL;
         }
+        if (profile_samples[i].seek_long_buffer) {
+            free(profile_samples[i].seek_long_buffer);
+            profile_samples[i].seek_long_buffer = NULL;
+        }
         profile_samples[i].loaded = 0;
     }
 
@@ -564,10 +592,15 @@ hdd_audio_seek(hard_disk_t *hdd_drive, uint32_t new_cylinder)
     /* Find a free seek voice for this drive */
     for (int v = 0; v < HDD_MAX_SEEK_VOICES_PER_HDD; v++) {
         if (!drive_state->seek_voices[v].active) {
+            const uint32_t long_from = audio_profiles[profile_id].seek_long_cylinders;
+            const int      use_long  = samples->seek_long_buffer && (long_from > 0) && (cylinder_diff >= long_from);
+
             drive_state->seek_voices[v].active = 1;
             drive_state->seek_voices[v].position = 0;
-            drive_state->seek_voices[v].volume = samples->seek_volume;
+            drive_state->seek_voices[v].volume = use_long ? samples->seek_long_volume : samples->seek_volume;
             drive_state->seek_voices[v].profile_id = profile_id;
+            drive_state->seek_voices[v].buffer     = use_long ? samples->seek_long_buffer : samples->seek_buffer;
+            drive_state->seek_voices[v].samples    = use_long ? samples->seek_long_samples : samples->seek_samples;
             thread_release_mutex(hdd_audio_mutex);
             return;
         }
@@ -745,24 +778,24 @@ hdd_audio_mix_seek_float(hdd_audio_drive_state_t *state, float *float_buffer, in
         if (!state->seek_voices[v].active)
             continue;
 
-        int seek_profile_id = state->seek_voices[v].profile_id;
-        hdd_audio_samples_t *seek_samples = &profile_samples[seek_profile_id];
-        if (!seek_samples->seek_buffer || seek_samples->seek_samples == 0)
+        const int16_t *seek_buf = state->seek_voices[v].buffer;
+        const int      seek_len = state->seek_voices[v].samples;
+        if (!seek_buf || seek_len == 0)
             continue;
 
         float voice_vol = state->seek_voices[v].volume;
         int pos = state->seek_voices[v].position;
         if (pos < 0) pos = 0;
 
-        for (int i = 0; i < frames_in_buffer && pos < seek_samples->seek_samples; i++, pos++) {
-            float seek_left = (float) seek_samples->seek_buffer[pos * 2] / 131072.0f * voice_vol;
-            float seek_right = (float) seek_samples->seek_buffer[pos * 2 + 1] / 131072.0f * voice_vol;
+        for (int i = 0; i < frames_in_buffer && pos < seek_len; i++, pos++) {
+            float seek_left = (float) seek_buf[pos * 2] / 131072.0f * voice_vol;
+            float seek_right = (float) seek_buf[pos * 2 + 1] / 131072.0f * voice_vol;
 
             float_buffer[i * 2]     += seek_left;
             float_buffer[i * 2 + 1] += seek_right;
         }
 
-        if (pos >= seek_samples->seek_samples) {
+        if (pos >= seek_len) {
             state->seek_voices[v].active = 0;
             state->seek_voices[v].position = 0;
         } else {
@@ -865,18 +898,18 @@ hdd_audio_mix_seek_int16(hdd_audio_drive_state_t *state, int16_t *buffer, int fr
         if (!state->seek_voices[v].active)
             continue;
 
-        int seek_profile_id = state->seek_voices[v].profile_id;
-        hdd_audio_samples_t *seek_samples = &profile_samples[seek_profile_id];
-        if (!seek_samples->seek_buffer || seek_samples->seek_samples == 0)
+        const int16_t *seek_buf = state->seek_voices[v].buffer;
+        const int      seek_len = state->seek_voices[v].samples;
+        if (!seek_buf || seek_len == 0)
             continue;
 
         float voice_vol = state->seek_voices[v].volume / 4.0f; /* match float level */
         int pos = state->seek_voices[v].position;
         if (pos < 0) pos = 0;
 
-        for (int i = 0; i < frames_in_buffer && pos < seek_samples->seek_samples; i++, pos++) {
-            int32_t left = buffer[i * 2] + (int32_t)(seek_samples->seek_buffer[pos * 2] * voice_vol);
-            int32_t right = buffer[i * 2 + 1] + (int32_t)(seek_samples->seek_buffer[pos * 2 + 1] * voice_vol);
+        for (int i = 0; i < frames_in_buffer && pos < seek_len; i++, pos++) {
+            int32_t left = buffer[i * 2] + (int32_t)(seek_buf[pos * 2] * voice_vol);
+            int32_t right = buffer[i * 2 + 1] + (int32_t)(seek_buf[pos * 2 + 1] * voice_vol);
 
             if (left > 32767) left = 32767;
             if (left < -32768) left = -32768;
@@ -887,7 +920,7 @@ hdd_audio_mix_seek_int16(hdd_audio_drive_state_t *state, int16_t *buffer, int fr
             buffer[i * 2 + 1] = (int16_t) right;
         }
 
-        if (pos >= seek_samples->seek_samples) {
+        if (pos >= seek_len) {
             state->seek_voices[v].active = 0;
             state->seek_voices[v].position = 0;
         } else {
