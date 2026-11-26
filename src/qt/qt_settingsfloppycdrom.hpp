@@ -47,6 +47,7 @@ private slots:
     void on_comboBoxBus_currentIndexChanged(int index);
     void on_comboBoxChannel_activated(int index);
     void on_comboBoxCDROMType_activated(int index);
+    void on_comboBoxCDROMAudio_activated(int index);
     void on_comboBoxCDSpeed_activated(int index);
     void on_comboBoxDVDSpeed_activated(int index);
     void on_comboBoxHDBDSpeed_activated(int index);

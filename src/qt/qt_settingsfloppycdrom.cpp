@@ -35,6 +35,7 @@ extern "C" {
 #include <86box/scsi_device.h>
 #include <86box/scsi_tape.h>
 #include <86box/fdd_audio.h>
+#include <86box/cdrom_audio.h>
 }
 
 #include "qt_settings_completer.hpp"
@@ -50,6 +51,7 @@ extern "C" {
 
 uint64_t               ifa[FDD_NUM] = { 0 };
 int                    inc[CDROM_NUM] = { 0 };
+QString                icda[CDROM_NUM]; /* each drive's sound profile, by internal name */
 
 void
 SettingsFloppyCDROM::setFloppyType(QAbstractItemModel *model, const QModelIndex &idx, int type)
@@ -324,9 +326,25 @@ SettingsFloppyCDROM::SettingsFloppyCDROM(QWidget *parent)
         else if (cdrom[i].bus_type == CDROM_BUS_LPT)
             Harddrives::busTrackClass->device_track(1, DEV_CDROM, cdrom[i].bus_type, cdrom[i].res);
         inc[i] = cdrom[i].no_check;
+        icda[i] = QString(cdrom_audio_profile[i]);
     }
     for (int i = 0; i < model->columnCount(); i++)
         ui->treeViewCDROM->resizeColumnToContents(i);
+
+    /* Drive sound: each profile in cdrom_audio_profiles.cfg, keyed by its
+       internal name. Profile 0 is always "None". */
+    const int cdAudioProfiles = cdrom_audio_get_profile_count();
+    ui->comboBoxCDROMAudio->addItem(tr("None"), QString("none"));
+    for (int i = 1; i < cdAudioProfiles; i++)
+        ui->comboBoxCDROMAudio->addItem(tr(cdrom_audio_get_profile_name(i)),
+                                        QString(cdrom_audio_get_profile_internal_name(i)));
+    for (int i = 0; i < CDROM_NUM; i++) {
+        /* Configured, but missing from the assets: keep it rather than
+           silently switching it off */
+        if (ui->comboBoxCDROMAudio->findData(icda[i]) < 0)
+            ui->comboBoxCDROMAudio->addItem(icda[i], icda[i]);
+    }
+    ui->comboBoxCDROMAudio->setEnabled(cdAudioProfiles > 1);
 
     connect(ui->treeViewCDROM->selectionModel(), &QItemSelectionModel::currentRowChanged,
             this, &SettingsFloppyCDROM::onCDROMRowChanged);
@@ -426,6 +444,7 @@ SettingsFloppyCDROM::changed()
         has_changed  |= (cdrom_get_type(i)        != model->index(i, 2).data(Qt::UserRole).toInt());
         has_changed  |= (cdrom[i].restricted_capacity != model->index(i, 1).data(Qt::UserRole + 4).toUInt());
         soft_changed |= (cdrom[i].no_check        != inc[i]);
+        has_changed |= (QString(cdrom_audio_profile[i]) != icda[i]);
     }
 
     return has_changed ? (SETTINGS_CHANGED | SETTINGS_REQUIRE_HARD_RESET) :
@@ -479,6 +498,7 @@ SettingsFloppyCDROM::save(int soft)
         cdrom[i].no_check    = inc[i];
         cdrom[i].restricted_capacity = model->index(i, 1).data(Qt::UserRole + 4).toUInt();
         cdrom_set_type(i, model->index(i, 2).data(Qt::UserRole).toInt());
+        qstrncpy(cdrom_audio_profile[i], icda[i].toUtf8().constData(), sizeof(cdrom_audio_profile[i]));
     }
 
 #ifdef DISABLE_FDD_AUDIO
@@ -563,6 +583,9 @@ SettingsFloppyCDROM::onCDROMRowChanged(const QModelIndex &current)
 
     ui->checkBoxErrorCheck->setChecked(!inc[current.row()]);
 
+    /* Drive sound */
+    ui->comboBoxCDROMAudio->setCurrentIndex(ui->comboBoxCDROMAudio->findData(icda[current.row()]));
+
     ui->comboBoxBus->setCurrentIndex(-1);
     auto *model = ui->comboBoxBus->model();
     auto  match = model->match(model->index(0, 0), Qt::UserRole, bus);
@@ -640,6 +663,15 @@ SettingsFloppyCDROM::on_checkBoxCheckBPB_stateChanged(int arg1)
 {
     auto idx = ui->treeViewFloppy->selectionModel()->currentIndex();
     ui->treeViewFloppy->model()->setData(idx.siblingAtColumn(2), arg1 == Qt::Checked ? tr("On") : tr("Off"));
+}
+
+void
+SettingsFloppyCDROM::on_comboBoxCDROMAudio_activated(int index)
+{
+    const int row = ui->treeViewCDROM->selectionModel()->currentIndex().row();
+
+    if ((index >= 0) && (row >= 0) && (row < CDROM_NUM))
+        icda[row] = ui->comboBoxCDROMAudio->itemData(index).toString();
 }
 
 void

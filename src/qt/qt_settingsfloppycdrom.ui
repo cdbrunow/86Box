@@ -292,6 +292,16 @@
             </item>
            </layout>
           </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="labelCDROMAudio">
+            <property name="text">
+             <string>Drive sound:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="3">
+           <widget class="QComboBox" name="comboBoxCDROMAudio"/>
+          </item>
          </layout>
         </widget>
        </item>
@@ -313,6 +323,7 @@
   <tabstop>comboBoxBus</tabstop>
   <tabstop>comboBoxChannel</tabstop>
   <tabstop>comboBoxCDROMType</tabstop>
+  <tabstop>comboBoxCDROMAudio</tabstop>
  </tabstops>
  <resources/>
  <connections/>
