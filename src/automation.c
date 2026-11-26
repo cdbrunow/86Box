@@ -881,7 +881,7 @@ static void sb_base64(strbuf_t *sb, const uint8_t *data, size_t len);
 #define AUD_RING_SECONDS 30
 #define AUD_MAX_SEGS     16
 
-static const char *aud_names[I_MAX] = { "main", "music", "wavetable", "cd", "fdd", "hdd", "ym2151", "midi" };
+static const char *aud_names[I_MAX] = { "main", "music", "wavetable", "cd", "fdd", "hdd", "ym2151", "ambient", "midi" };
 
 typedef struct {
     int16_t *ring; /* stereo frames, the last AUD_RING_SECONDS */

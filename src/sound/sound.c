@@ -67,7 +67,7 @@ int  midi_freq                          = 44100;
 int  midi_buf_size                      = 4410;
 
 unsigned long long src_freqs[I_MAX] = {
-    0, MUSIC_FREQ, WT_FREQ, CD_FREQ, 0, 0, YM2151_FREQ, 0
+    0, MUSIC_FREQ, WT_FREQ, CD_FREQ, 0, 0, YM2151_FREQ, 0, 0
 };
 
 #define NUM_SOUND_HANDLERS 16
@@ -690,6 +690,7 @@ sound_stream_rate(const uint8_t src)
         case I_NORMAL:
         case I_FDD:
         case I_HDD:
+        case I_AMBIENT:
             return sound_sample_rate;
         case I_MIDI:
             return src_freqs[I_MIDI] ? (int) src_freqs[I_MIDI] : midi_freq;

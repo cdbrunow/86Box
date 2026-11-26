@@ -70,6 +70,9 @@ enum {
     I_FDD,
     I_HDD,
     I_YM2151,
+    I_AMBIENT, /* fans, CD-ROM drive, ...: see ambient.c. Must stay before
+                  I_MIDI: the backends treat I_MIDI as the last, optional,
+                  stream and only create sources below it. */
     I_MIDI,
     I_MAX
 };
@@ -225,6 +228,7 @@ extern int         sound_stream_rate(const uint8_t src);
 #define givealbuffer_cd(b)      sound_give(b, I_CD, CD_BUFLEN << 1)
 #define givealbuffer_fdd(b, s)  sound_give(b, I_FDD, s)
 #define givealbuffer_hdd(b, s)  sound_give(b, I_HDD, s)
+#define givealbuffer_ambient(b, s)         sound_give(b, I_AMBIENT, s)
 #define givealbuffer_midi(b, s) sound_give(b, I_MIDI, s)
 
 #define sb_vibra16c_onboard_relocate_base sb_vibra16s_onboard_relocate_base

@@ -52,7 +52,8 @@ static mutex_t *capture_mutex = NULL;
 
 static unsigned long long buf_sizes[I_MAX] = {
     0, (MUSICBUFLEN << 1), (WTBUFLEN << 1),     (CD_BUFLEN << 1),
-    0, 0,                  (YM2151BUFLEN << 1), 0
+    0, 0,                  (YM2151BUFLEN << 1), 0,
+    0
 };
 
 void
@@ -386,8 +387,8 @@ inital(void)
 
     const int pcm_buf_len = sound_sample_rate / 50;
 
-    buf_sizes[I_NORMAL] = buf_sizes[I_FDD] = buf_sizes[I_HDD] = (pcm_buf_len << 1);
-    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = sound_sample_rate;
+    buf_sizes[I_NORMAL] = buf_sizes[I_FDD] = buf_sizes[I_HDD] = buf_sizes[I_AMBIENT] = (pcm_buf_len << 1);
+    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = src_freqs[I_AMBIENT] = sound_sample_rate;
 
     if (init_midi) {
         buf_sizes[I_MIDI] = midi_buf_size;
@@ -406,7 +407,7 @@ inital(void)
     for (int i = 0; i < sources; i++)
        alGenBuffers(4, buffers[i]);
 
-    // Create sources: 0=main, 1=music, 2=wt, 3=cd, 4=fdd, 5=hdd, 6=midi(optional)
+    // Create sources: 0=main, 1=music, 2=wt, 3=cd, 4=fdd, 5=hdd, 6=ym2151, 7=ambient, 8=midi(optional)
     if (init_midi)
         alGenSources(8, source);
     else

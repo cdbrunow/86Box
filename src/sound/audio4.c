@@ -34,7 +34,7 @@
 #define USE_NEW_API
 #endif
 
-static int                audio[I_MAX] = { -1, -1, -1, -1, -1, -1, -1, -1 };
+static int                audio[I_MAX] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 
 #ifdef USE_NEW_API
 static struct audio_swpar info[8];
@@ -221,7 +221,7 @@ closeal(void)
 void
 inital(void)
 {
-    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = sound_sample_rate;
+    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = src_freqs[I_AMBIENT] = sound_sample_rate;
 
     for (int i = 0; i < sizeof(audio) / sizeof(audio[0]); i++) {
         if (sound_output_device[0] != '\0') {

@@ -26,7 +26,7 @@
 #include <86box/plat_unused.h>
 #include <86box/runctl.h>
 
-static struct sio_hdl* audio[I_MAX] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static struct sio_hdl* audio[I_MAX] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 static struct sio_par  info[I_MAX];
 
 int
@@ -173,7 +173,7 @@ closeal(void)
 void
 inital(void)
 {
-    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = sound_sample_rate;
+    src_freqs[I_NORMAL] = src_freqs[I_FDD] = src_freqs[I_HDD] = src_freqs[I_AMBIENT] = sound_sample_rate;
 
     const char *devname = (sound_output_device[0] != '\0') ? sound_output_device : SIO_DEVANY;
 
