@@ -103,6 +103,7 @@ extern "C" {
 #include <86box/keyboard.h>
 #include <86box/timer.h>
 #include <86box/nvr.h>
+#include <86box/system_audio.h>
 #ifndef Q_OS_MACOS
 extern void exit_pause(void);
 #endif
@@ -470,7 +471,14 @@ main_thread_fn()
             plat_delay_ms(500);
         }
     }
-    QTimer::singleShot(0, QApplication::instance(), []() { QApplication::processEvents(); QApplication::instance()->quit(); });
+    /* After a guest power-off, let the fan's spin-down finish playing first
+       (0 ms otherwise). This thread has no event loop, so a delayed timer
+       started here would never fire: hop to the GUI thread first (a 0 ms
+       single shot is posted there) and start the delay from it. */
+    const int spin_down_ms = system_audio_spin_down_ms_left();
+    QTimer::singleShot(0, QApplication::instance(), [spin_down_ms]() {
+        QTimer::singleShot(spin_down_ms, QApplication::instance(), []() { QApplication::processEvents(); QApplication::instance()->quit(); });
+    });
 }
 
 static std::thread *main_thread;

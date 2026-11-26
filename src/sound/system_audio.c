@@ -356,7 +356,7 @@ system_audio_reset(void)
 }
 
 int
-system_audio_power_off(void)
+system_audio_spin_down_ms_left(void)
 {
     int ms = 0;
 
@@ -364,14 +364,27 @@ system_audio_power_off(void)
         return 0;
 
     ambient_lock();
+    if ((fan.state == FAN_STOPPING) && (fan.pos < fan.stop.frames))
+        ms = (int) (((int64_t) (fan.stop.frames - fan.pos) * 1000) / SAMPLE_RATE) + POWER_OFF_MARGIN_MS;
+    ambient_unlock();
+
+    return ms;
+}
+
+int
+system_audio_power_off(void)
+{
+    if (!fan.registered)
+        return 0;
+
+    ambient_lock();
     if ((fan.state == FAN_STARTING) || (fan.state == FAN_RUNNING)) {
         fan.state = FAN_STOPPING;
         fan.pos   = 0;
-        if (fan.stop.frames > 0)
-            ms = (int) (((int64_t) fan.stop.frames * 1000) / SAMPLE_RATE) + POWER_OFF_MARGIN_MS;
     }
     ambient_unlock();
 
+    const int ms = system_audio_spin_down_ms_left();
     system_audio_log("System audio: power off, spin-down takes %d ms\n", ms);
     return ms;
 }

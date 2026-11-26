@@ -34,6 +34,10 @@ extern void system_audio_reset(void);
    it needs to finish playing (0 if there is nothing to play). */
 extern int system_audio_power_off(void);
 
+/* Milliseconds of spin-down still to play (0 if none is playing). The Qt
+   frontend waits this long before quitting after a power-off. */
+extern int system_audio_spin_down_ms_left(void);
+
 /* Emulator exit: stop at once, without playing anything. */
 extern void system_audio_close(void);
 
