@@ -30,12 +30,13 @@ extern const char *system_audio_get_profile_internal_name(int id);
    play the spin-up followed by the running loop. */
 extern void system_audio_reset(void);
 
-/* Guest soft power-off: start the spin-down. Returns how many milliseconds
-   it needs to finish playing (0 if there is nothing to play). */
+/* Machine power-off: the fan, the hard disks and the CD-ROM drives all spin
+   down. Returns how many milliseconds that takes to play (0 if nothing to
+   play). The sounds keep playing after emulation stops. */
 extern int system_audio_power_off(void);
 
-/* Milliseconds of spin-down still to play (0 if none is playing). The Qt
-   frontend waits this long before quitting after a power-off. */
+/* Milliseconds of power-off spin-down still to play, for every device
+   (0 if none is playing). The Qt frontend waits this long before quitting. */
 extern int system_audio_spin_down_ms_left(void);
 
 /* Emulator exit: stop at once, without playing anything. */

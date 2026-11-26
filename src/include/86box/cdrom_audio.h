@@ -36,6 +36,12 @@ extern void cdrom_audio_reset(void);
 /* Emulator exit: stop at once, without playing anything. */
 extern void cdrom_audio_close(void);
 
+/* Machine power-off: every spinning disc spins down. The spin-downs keep
+   playing after emulation stops. */
+extern void cdrom_audio_power_off(void);
+/* Milliseconds of spin-down still to play (0 if none). */
+extern int cdrom_audio_spin_down_ms_left(void);
+
 /*
  * Hooks, called from cdrom.c (and scsi_cdrom.c for STOP UNIT). All of them
  * do nothing for a drive with no profile.

@@ -687,6 +687,45 @@ hdd_audio_get_spindle_state(void)
     return HDD_SPINDLE_STOPPED;
 }
 
+int
+hdd_audio_spin_down_ms_left(void)
+{
+    int frames = 0;
+
+    if (!hdd_audio_mutex)
+        return 0;
+
+    thread_wait_mutex(hdd_audio_mutex);
+    for (int i = 0; i < active_drive_count; i++) {
+        const hdd_audio_drive_state_t *state = &drive_states[i];
+
+        if (state->spindle_state == HDD_SPINDLE_STOPPING) {
+            const int left = profile_samples[state->profile_id].spindle_stop_samples - state->spindle_transition_pos;
+            if (left > frames)
+                frames = left;
+        }
+    }
+    thread_release_mutex(hdd_audio_mutex);
+
+    return (int) (((int64_t) frames * 1000) / 48000);
+}
+
+int
+hdd_audio_is_spinning_down(void)
+{
+    int ret = 0;
+
+    if (!hdd_audio_mutex)
+        return 0;
+
+    thread_wait_mutex(hdd_audio_mutex);
+    for (int i = 0; i < active_drive_count; i++)
+        ret |= (drive_states[i].spindle_state == HDD_SPINDLE_STOPPING);
+    thread_release_mutex(hdd_audio_mutex);
+
+    return ret;
+}
+
 hdd_spindle_state_t
 hdd_audio_get_drive_spindle_state(int hdd_index)
 {

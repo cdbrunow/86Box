@@ -1421,7 +1421,9 @@ sound_hdd_thread(UNUSED(void *param))
     uint64_t frames_rendered = 0;
 
     while (hddaudioon) {
-        if (dopause) {
+        /* Paused: silent, unless a drive is spinning down (a power-off, which
+           stops emulation first) */
+        if (dopause && !hdd_audio_is_spinning_down()) {
             thread_wait_event(sound_hdd_event, 50);
             thread_reset_event(sound_hdd_event);
             start_time      = plat_get_ticks();

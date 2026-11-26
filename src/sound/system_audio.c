@@ -32,6 +32,8 @@
 #include <86box/rom.h>
 #include <86box/sound_util.h>
 #include <86box/ambient.h>
+#include <86box/hdd_audio.h>
+#include <86box/cdrom_audio.h>
 #include <86box/system_audio.h>
 
 /* All samples are 48 kHz (see sound_load_wav()) */
@@ -360,29 +362,39 @@ system_audio_spin_down_ms_left(void)
 {
     int ms = 0;
 
-    if (!fan.registered)
-        return 0;
+    if (fan.registered) {
+        ambient_lock();
+        if ((fan.state == FAN_STOPPING) && (fan.pos < fan.stop.frames))
+            ms = (int) (((int64_t) (fan.stop.frames - fan.pos) * 1000) / SAMPLE_RATE);
+        ambient_unlock();
+    }
 
-    ambient_lock();
-    if ((fan.state == FAN_STOPPING) && (fan.pos < fan.stop.frames))
-        ms = (int) (((int64_t) (fan.stop.frames - fan.pos) * 1000) / SAMPLE_RATE) + POWER_OFF_MARGIN_MS;
-    ambient_unlock();
+    /* The machine is off once the longest spin-down has finished */
+    const int hdd_ms   = hdd_audio_spin_down_ms_left();
+    const int cdrom_ms = cdrom_audio_spin_down_ms_left();
+    if (hdd_ms > ms)
+        ms = hdd_ms;
+    if (cdrom_ms > ms)
+        ms = cdrom_ms;
 
-    return ms;
+    return (ms > 0) ? (ms + POWER_OFF_MARGIN_MS) : 0;
 }
 
 int
 system_audio_power_off(void)
 {
-    if (!fan.registered)
-        return 0;
-
-    ambient_lock();
-    if ((fan.state == FAN_STARTING) || (fan.state == FAN_RUNNING)) {
-        fan.state = FAN_STOPPING;
-        fan.pos   = 0;
+    if (fan.registered) {
+        ambient_lock();
+        if ((fan.state == FAN_STARTING) || (fan.state == FAN_RUNNING)) {
+            fan.state = FAN_STOPPING;
+            fan.pos   = 0;
+        }
+        ambient_unlock();
     }
-    ambient_unlock();
+
+    /* Everything with a motor stops when the power goes */
+    hdd_audio_spindown();
+    cdrom_audio_power_off();
 
     const int ms = system_audio_spin_down_ms_left();
     system_audio_log("System audio: power off, spin-down takes %d ms\n", ms);

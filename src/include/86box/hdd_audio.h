@@ -78,6 +78,12 @@ extern void hdd_audio_spinup(void);
 extern void hdd_audio_spindown(void);
 extern hdd_spindle_state_t hdd_audio_get_spindle_state(void);
 
+/* Milliseconds until every spinning-down drive has finished its spin-down
+   sound (0 if none is spinning down). */
+extern int hdd_audio_spin_down_ms_left(void);
+/* Nonzero while a drive is playing its spin-down: the HDD sound thread then
+   keeps playing even though emulation has stopped (power-off). */
+extern int hdd_audio_is_spinning_down(void);
 
 #ifdef __cplusplus
 }

@@ -348,9 +348,20 @@ render_spin(drive_t *d, float *buf, int frames)
 static int
 cdrom_audio_render(float *buf, int frames, int paused, UNUSED(void *priv))
 {
-    /* Paused: silent, and nothing advances, so sounds resume where they were */
-    if (paused)
-        return 0;
+    /* Paused: silent, and nothing advances, so sounds resume where they were.
+       The exception is a spin-down: a power-off stops emulation first, and
+       the discs then spin down (see cdrom_audio_power_off()). */
+    if (paused) {
+        int audible = 0;
+
+        for (int i = 0; i < DRIVES; i++) {
+            if ((drives[i].profile != 0) && (drives[i].spin == SPIN_STOPPING)) {
+                render_spin(&drives[i], buf, frames);
+                audible = 1;
+            }
+        }
+        return audible;
+    }
 
     for (int i = 0; i < DRIVES; i++) {
         drive_t *d = &drives[i];
@@ -627,4 +638,39 @@ void
 cdrom_audio_close(void)
 {
     unload();
+}
+
+void
+cdrom_audio_power_off(void)
+{
+    ambient_lock();
+    for (int i = 0; i < DRIVES; i++) {
+        drive_t *d = &drives[i];
+
+        if ((d->profile != 0) && ((d->spin == SPIN_STARTING) || (d->spin == SPIN_RUNNING))) {
+            d->spin     = SPIN_STOPPING;
+            d->spin_pos = 0;
+        }
+    }
+    ambient_unlock();
+}
+
+int
+cdrom_audio_spin_down_ms_left(void)
+{
+    int frames = 0;
+
+    ambient_lock();
+    for (int i = 0; i < DRIVES; i++) {
+        const drive_t *d = &drives[i];
+
+        if ((d->profile != 0) && (d->spin == SPIN_STOPPING)) {
+            const int left = samples[d->profile][S_SPIN_STOP].frames - d->spin_pos;
+            if (left > frames)
+                frames = left;
+        }
+    }
+    ambient_unlock();
+
+    return (int) (((int64_t) frames * 1000) / 48000);
 }
