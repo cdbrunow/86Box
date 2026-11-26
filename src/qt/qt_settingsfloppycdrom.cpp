@@ -645,8 +645,11 @@ SettingsFloppyCDROM::on_checkBoxCheckBPB_stateChanged(int arg1)
 void
 SettingsFloppyCDROM::on_checkBoxErrorCheck_stateChanged(int arg1)
 {
-    auto idx = ui->treeViewFloppy->selectionModel()->currentIndex();
-    inc[idx.row()] = (arg1 != Qt::Checked);
+    /* The CD-ROM list's selection, not the floppy list's */
+    const int row = ui->treeViewCDROM->selectionModel()->currentIndex().row();
+
+    if ((row >= 0) && (row < CDROM_NUM))
+        inc[row] = (arg1 != Qt::Checked);
 }
 
 void
