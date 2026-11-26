@@ -1014,7 +1014,8 @@ modem_sound_get_buffer(int32_t *buffer, uint16_t length, void *priv)
     const int mode = atomic_load(&sound->mode);
     const int level = atomic_load(&sound->level);
     static const double gains[4] = { 0.30, 0.30, 0.55, 0.85 };
-    const double gain = 11000.0 * gains[level];
+    /* The guest's speaker volume (ATL), then the user's modem level (percent) */
+    const double gain = 11000.0 * gains[level] * ((double) modem_sound_gain / 100.0);
     for (uint16_t i = 0; i < length; i++) {
         double sample = modem_sound_sample(sound, mode);
         if (sound->audible_now)

@@ -434,9 +434,10 @@ load_general(void)
     hdd_sound_gain   = ini_section_get_int(cat, "hdd_sound_gain", 100);
     cdrom_sound_gain = ini_section_get_int(cat, "cdrom_sound_gain", 100);
     fan_sound_gain   = ini_section_get_int(cat, "fan_sound_gain", 100);
+    modem_sound_gain = ini_section_get_int(cat, "modem_sound_gain", 100);
     {
-        int *gains[] = { &fdd_sound_gain, &hdd_sound_gain, &cdrom_sound_gain, &fan_sound_gain };
-        for (int g = 0; g < 4; g++)
+        int *gains[] = { &fdd_sound_gain, &hdd_sound_gain, &cdrom_sound_gain, &fan_sound_gain, &modem_sound_gain };
+        for (int g = 0; g < 5; g++)
             *gains[g] = (*gains[g] < 0) ? 0 : ((*gains[g] > 200) ? 200 : *gains[g]);
     }
 
@@ -3730,8 +3731,9 @@ save_general(void)
             { "hdd_sound_gain", hdd_sound_gain },
             { "cdrom_sound_gain", cdrom_sound_gain },
             { "fan_sound_gain", fan_sound_gain },
+            { "modem_sound_gain", modem_sound_gain },
         };
-        for (int g = 0; g < 4; g++) {
+        for (int g = 0; g < 5; g++) {
             if (gains[g].value != 100)
                 ini_section_set_int(cat, gains[g].key, gains[g].value);
             else

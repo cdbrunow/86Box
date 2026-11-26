@@ -39,16 +39,17 @@ SoundGain::SoundGain(QWidget *parent)
     const struct {
         QString name;
         int    *value;
-    } kinds[4] = {
+    } kinds[5] = {
         { tr("Floppy drives"), &fdd_sound_gain },
         { tr("Hard disks"), &hdd_sound_gain },
         { tr("CD-ROM drives"), &cdrom_sound_gain },
         { tr("Fan"), &fan_sound_gain },
+        { tr("Modem speaker"), &modem_sound_gain },
     };
 
     auto *group = new QGroupBox(tr("Drive sounds"), this);
     auto *grid  = new QGridLayout(group);
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         levels[i] = { kinds[i].value, *kinds[i].value };
 
         auto *slider  = new QSlider(Qt::Horizontal, group);
