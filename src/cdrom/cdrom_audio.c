@@ -100,7 +100,7 @@ typedef enum {
 
 typedef struct {
     const sample_t *sample; /* NULL = free */
-    int             pos;
+    int             pos;    /* negative: frames of silence before it starts */
     int             is_seek;
 } voice_t;
 
@@ -272,24 +272,34 @@ free_all_samples(void)
 /* ------------------------------------------------------------------------ */
 
 /* Add up to `frames` frames of `s` from *pos into `buf`. Advances *pos and
-   returns the number of frames added (fewer when the sample ends). */
+   returns the number of frames used (fewer when the sample ends). A negative
+   *pos is a delay: that many frames pass in silence first. */
 static int
 mix(const sample_t *s, int *pos, float *buf, int frames)
 {
     const float scale = s->volume / 131072.0f; /* full scale -> 0.25, like the drive sounds */
-    int         n     = s->frames - *pos;
+    int         wait  = 0;
+
+    if (*pos < 0) {
+        wait = (-*pos < frames) ? -*pos : frames;
+        *pos += wait;
+        buf += wait * 2;
+        frames -= wait;
+    }
+
+    int n = s->frames - *pos;
 
     if (n > frames)
         n = frames;
     if (n <= 0)
-        return 0;
+        return wait;
 
     const int16_t *src = &s->buffer[*pos * 2];
     for (int i = 0; i < n * 2; i++)
         buf[i] += (float) src[i] * scale;
 
     *pos += n;
-    return n;
+    return wait + n;
 }
 
 static void
@@ -368,10 +378,10 @@ cdrom_audio_render(float *buf, int frames, int paused, UNUSED(void *priv))
 /* Hooks                                                                    */
 /* ------------------------------------------------------------------------ */
 
-/* Start a one-shot sound on a free voice (ambient lock held). Dropped if the
-   sample is missing or every voice is busy. */
+/* Start a one-shot sound on a free voice, after `delay` frames (ambient lock
+   held). Dropped if the sample is missing or every voice is busy. */
 static void
-play(drive_t *d, int s)
+play_after(drive_t *d, int s, int delay)
 {
     const sample_t *smp = &samples[d->profile][s];
 
@@ -381,11 +391,17 @@ play(drive_t *d, int s)
     for (int v = 0; v < VOICES; v++) {
         if (d->voices[v].sample == NULL) {
             d->voices[v].sample  = smp;
-            d->voices[v].pos     = 0;
+            d->voices[v].pos     = -delay;
             d->voices[v].is_seek = (s == S_SEEK_STEP) || (s == S_SEEK_OUT) || (s == S_SEEK_IN);
             return;
         }
     }
+}
+
+static void
+play(drive_t *d, int s)
+{
+    play_after(d, s, 0);
 }
 
 /* Is a seek sound that started less than SEEK_SPACING ago still playing? */
@@ -531,8 +547,18 @@ cdrom_audio_tray_close(cdrom_t *dev)
         return;
 
     ambient_lock();
-    if (d->profile != 0)
-        play(d, S_CLOSE_TRAY);
+    if (d->profile != 0) {
+        /* A host image swap removes and inserts at the same instant: let the
+           tray finish opening before it closes */
+        const sample_t *open = &samples[d->profile][S_OPEN_TRAY];
+        int             wait = 0;
+
+        for (int v = 0; v < VOICES; v++) {
+            if ((d->voices[v].sample == open) && (open->frames - d->voices[v].pos > wait))
+                wait = open->frames - d->voices[v].pos;
+        }
+        play_after(d, S_CLOSE_TRAY, wait);
+    }
     ambient_unlock();
 }
 
