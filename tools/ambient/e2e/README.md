@@ -13,6 +13,7 @@ python3 -I fan_e2e.py        <86Box> <roms> <assets> <workdir>   # system fan
 python3 -I cd_atapi_e2e.py   <86Box> <roms> <assets> <workdir>   # ATAPI CD-ROM
 python3 -I cd_mitsumi_e2e.py <86Box> <roms> <assets> <workdir>   # Mitsumi CD-ROM
 python3 -I power_e2e.py      <86Box> <roms> <assets> <workdir>   # fan + MFM disk + CD, soft-off
+python3 -I switch_e2e.py     <86Box> <roms> <assets> <workdir>   # power switch, keep-window option
 ```
 
 Run Qt with `QT_QPA_PLATFORM=offscreen` (the fan and power scripts set it)
