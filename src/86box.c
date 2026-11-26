@@ -2198,6 +2198,11 @@ pc_close(UNUSED(thread_t *ptr))
 
     video_close();
 
+    /* Stop the drive sound threads and free their samples. Nothing plays on
+       exit: the spin-down sounds are for power-off, not for closing the VM. */
+    fdd_audio_close();
+    hdd_audio_close();
+
     sound_close();
 
     device_close_all();

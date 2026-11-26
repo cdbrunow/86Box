@@ -716,6 +716,9 @@ fdd_audio_close(void)
 {
     fdd_log("FDD Audio: Shutting down audio system\n");
 
+    /* Stop the sound thread first, so it can't read the buffers freed below */
+    sound_fdd_thread_end();
+
     /* Free loaded profile samples */
     for (int profile_id = 0; profile_id < audio_profile_count; profile_id++) {
         drive_audio_samples_t *samples = &profile_samples[profile_id];
@@ -774,8 +777,6 @@ fdd_audio_close(void)
             }
         }
     }
-
-    sound_fdd_thread_end();
 
     fdd_log("FDD Audio: Shutdown complete\n");
 }

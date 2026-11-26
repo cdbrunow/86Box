@@ -246,6 +246,9 @@ hdd_audio_get_profile_by_internal_name(const char *internal_name)
 void
 hdd_audio_close(void)
 {
+    /* Stop the sound thread first, so it can't read the buffers freed below */
+    sound_hdd_thread_end();
+
     /* Free all loaded profile samples */
     for (int i = 0; i < HDD_AUDIO_PROFILE_MAX; i++) {
         if (profile_samples[i].spindle_start_buffer) {
