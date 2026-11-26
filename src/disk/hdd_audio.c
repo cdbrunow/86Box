@@ -779,7 +779,7 @@ hdd_audio_mix_spindle_start_int16(hdd_audio_drive_state_t *state, hdd_audio_samp
         return;
     }
     
-    float start_volume = samples->spindle_start_volume;
+    float start_volume = samples->spindle_start_volume / 4.0f; /* match float level */
     for (int i = 0; i < frames_in_buffer && state->spindle_transition_pos < samples->spindle_start_samples; i++) {
         int32_t left = buffer[i * 2] + (int32_t)(samples->spindle_start_buffer[state->spindle_transition_pos * 2] * start_volume);
         int32_t right = buffer[i * 2 + 1] + (int32_t)(samples->spindle_start_buffer[state->spindle_transition_pos * 2 + 1] * start_volume);
@@ -807,7 +807,7 @@ hdd_audio_mix_spindle_loop_int16(hdd_audio_drive_state_t *state, hdd_audio_sampl
     if (!samples->spindle_loop_buffer || samples->spindle_loop_samples <= 0)
         return;
     
-    float spindle_volume = samples->spindle_loop_volume;
+    float spindle_volume = samples->spindle_loop_volume / 4.0f; /* match float level */
     for (int i = 0; i < frames_in_buffer; i++) {
         int32_t left = buffer[i * 2] + (int32_t)(samples->spindle_loop_buffer[state->spindle_pos * 2] * spindle_volume);
         int32_t right = buffer[i * 2 + 1] + (int32_t)(samples->spindle_loop_buffer[state->spindle_pos * 2 + 1] * spindle_volume);
@@ -835,7 +835,7 @@ hdd_audio_mix_spindle_stop_int16(hdd_audio_drive_state_t *state, hdd_audio_sampl
         return;
     }
     
-    float stop_volume = samples->spindle_stop_volume;
+    float stop_volume = samples->spindle_stop_volume / 4.0f; /* match float level */
     for (int i = 0; i < frames_in_buffer && state->spindle_transition_pos < samples->spindle_stop_samples; i++) {
         int32_t left = buffer[i * 2] + (int32_t)(samples->spindle_stop_buffer[state->spindle_transition_pos * 2] * stop_volume);
         int32_t right = buffer[i * 2 + 1] + (int32_t)(samples->spindle_stop_buffer[state->spindle_transition_pos * 2 + 1] * stop_volume);
@@ -867,7 +867,7 @@ hdd_audio_mix_seek_int16(hdd_audio_drive_state_t *state, int16_t *buffer, int fr
         if (!seek_samples->seek_buffer || seek_samples->seek_samples == 0)
             continue;
 
-        float voice_vol = state->seek_voices[v].volume;
+        float voice_vol = state->seek_voices[v].volume / 4.0f; /* match float level */
         int pos = state->seek_voices[v].position;
         if (pos < 0) pos = 0;
 
