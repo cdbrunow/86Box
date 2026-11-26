@@ -23,6 +23,14 @@ private slots:
 private:
     Ui::SoundGain *ui;
     int            sound_gain_orig;
+
+    /* Drive and fan sound levels: the setting each slider edits, and its
+       value when the dialog opened (restored on Cancel) */
+    struct Level {
+        int *value;
+        int  orig;
+    };
+    Level levels[4];
 };
 
 #endif // QT_SOUNDGAIN_HPP
