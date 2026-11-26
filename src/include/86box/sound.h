@@ -67,6 +67,7 @@ extern int fdd_sound_gain;
 extern int hdd_sound_gain;
 extern int cdrom_sound_gain;
 extern int fan_sound_gain;
+extern int modem_sound_gain;
 
 /* Scale a block of `samples` values (float or int16, as sound_is_float
    says) by `percent`, clamping int16. Does nothing at 100. */

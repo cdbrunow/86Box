@@ -66,6 +66,7 @@ int  fdd_sound_gain                     = 100;
 int  hdd_sound_gain                     = 100;
 int  cdrom_sound_gain                   = 100;
 int  fan_sound_gain                     = 100;
+int  modem_sound_gain                   = 100;
 char sound_output_device[512]           = { 0 };
 
 int  midi_freq                          = 44100;
