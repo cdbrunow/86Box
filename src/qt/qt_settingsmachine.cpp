@@ -40,6 +40,7 @@ extern "C" {
 #include <86box/machine.h>
 #include <86box/nvr.h>
 #include <86box/weitek.h>
+#include <86box/system_audio.h>
 }
 
 #include "qt_deviceconfig.hpp"
@@ -121,6 +122,24 @@ SettingsMachine::SettingsMachine(QWidget *parent)
 
     ui->comboBoxPitMode->setCurrentIndex(-1);
     ui->comboBoxPitMode->setCurrentIndex(pit_mode + 1);
+
+    /* System fan sound: each profile in system_audio_profiles.cfg, keyed by
+       its internal name. Profile 0 is always "None". */
+    const int fanProfiles = system_audio_get_profile_count();
+    ui->comboBoxFanAudio->addItem(tr("None"), QString("none"));
+    for (int i = 1; i < fanProfiles; i++)
+        ui->comboBoxFanAudio->addItem(tr(system_audio_get_profile_name(i)),
+                                      QString(system_audio_get_profile_internal_name(i)));
+    ui->comboBoxFanAudio->setEnabled(fanProfiles > 1);
+
+    int fanIndex = ui->comboBoxFanAudio->findData(QString(system_fan_audio_profile));
+    if (fanIndex < 0) {
+        /* Configured, but missing from the assets: keep it rather than
+           silently switching it off */
+        ui->comboBoxFanAudio->addItem(QString(system_fan_audio_profile), QString(system_fan_audio_profile));
+        fanIndex = ui->comboBoxFanAudio->count() - 1;
+    }
+    ui->comboBoxFanAudio->setCurrentIndex(fanIndex);
 
     ui->groupBoxTimeSync->setChecked(time_sync & TIME_SYNC_ENABLED);
     if (time_sync & TIME_SYNC_UTC)
@@ -248,6 +267,7 @@ SettingsMachine::changed()
     has_changed |= (cpu_waitstates             != temp);
 
     has_changed |= (pit_mode                   !=  ui->comboBoxPitMode->currentData().toInt());
+    has_changed |= (QString(system_fan_audio_profile) != ui->comboBoxFanAudio->currentData().toString());
 
     int sync;
     int offset_years;
@@ -323,6 +343,9 @@ SettingsMachine::save(int soft)
         cpu_waitstates = 0;
 
     pit_mode = ui->comboBoxPitMode->currentData().toInt();
+
+    const QByteArray fanProfile = ui->comboBoxFanAudio->currentData().toString().toUtf8();
+    qstrncpy(system_fan_audio_profile, fanProfile.constData(), sizeof(system_fan_audio_profile));
 
     timeSyncSettings(time_sync, time_offset_years, time_fixed_year, time_keep_date);
 }

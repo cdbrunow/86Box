@@ -122,6 +122,16 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="labelFanAudio">
+            <property name="text">
+             <string>Fan sound:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">
+           <widget class="QComboBox" name="comboBoxFanAudio"/>
+          </item>
 
          </layout>
         </widget>
