@@ -889,7 +889,12 @@ plat_power_off(void)
     x86_sub_cycles(99999999);
 
     runctl_request_stop();
-    QTimer::singleShot(spin_down_ms, (const QWidget *) main_window, &QMainWindow::close);
+    /* Called on the emulation thread, which has no event loop: a delayed
+       timer started here would never fire, so post to the GUI thread (a
+       0 ms single shot) and start the delay from there. */
+    QTimer::singleShot(0, (const QWidget *) main_window, [spin_down_ms]() {
+        QTimer::singleShot(spin_down_ms, (const QWidget *) main_window, &QMainWindow::close);
+    });
 }
 
 /* Converts the language code string to a numeric language ID */
