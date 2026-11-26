@@ -137,3 +137,31 @@ ambient_render(float *buf, int frames)
     }
 }
 
+#ifdef AMBIENT_TEST
+#    include <math.h>
+#    include <86box/plat_unused.h>
+
+static double test_phase = 0.0;
+
+static void
+ambient_test_render(float *buf, int frames, UNUSED(void *priv))
+{
+    const double step = 2.0 * M_PI * 440.0 / (double) sound_sample_rate;
+
+    for (int i = 0; i < frames; i++) {
+        /* 0.05 is about -26 dBFS: clearly audible, but quiet */
+        float s = (float) (0.05 * sin(test_phase));
+        buf[i * 2] += s;
+        buf[i * 2 + 1] += s;
+        test_phase += step;
+        if (test_phase >= 2.0 * M_PI)
+            test_phase -= 2.0 * M_PI;
+    }
+}
+
+void
+ambient_test_init(void)
+{
+    ambient_register_source(ambient_test_render, NULL);
+}
+#endif

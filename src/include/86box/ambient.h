@@ -53,6 +53,10 @@ extern void ambient_close(void);
    source into it, clamp. */
 extern void ambient_render(float *buf, int frames);
 
+#ifdef AMBIENT_TEST
+/* Development only: a quiet 440 Hz tone, to check the stream end to end. */
+extern void ambient_test_init(void);
+#endif
 
 #ifdef __cplusplus
 }

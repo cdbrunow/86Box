@@ -1755,6 +1755,10 @@ pc_init_modules(void)
     hdd_audio_load_profiles();
     hdd_audio_init();
 
+#ifdef AMBIENT_TEST
+    /* Development only: a quiet 440 Hz tone on the ambient stream */
+    ambient_test_init();
+#endif
 
     sound_init();
 
