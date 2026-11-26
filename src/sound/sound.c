@@ -62,6 +62,10 @@ int  music_pos_global                   = 0;
 int  ym2151_pos_global                  = 0;
 int  wavetable_pos_global               = 0;
 int  sound_gain                         = 0;
+int  fdd_sound_gain                     = 100;
+int  hdd_sound_gain                     = 100;
+int  cdrom_sound_gain                   = 100;
+int  fan_sound_gain                     = 100;
 char sound_output_device[512]           = { 0 };
 
 int  midi_freq                          = 44100;
@@ -1336,6 +1340,27 @@ sound_cd_thread_reset(void)
     }
 }
 
+void
+sound_scale_block(void *buf, int samples, int percent)
+{
+    if (percent == 100)
+        return;
+
+    const float gain = (float) percent / 100.0f;
+
+    if (sound_is_float) {
+        float *f = (float *) buf;
+        for (int i = 0; i < samples; i++)
+            f[i] *= gain;
+    } else {
+        int16_t *s = (int16_t *) buf;
+        for (int i = 0; i < samples; i++) {
+            float v = (float) s[i] * gain;
+            s[i]    = (v > 32767.0f) ? 32767 : ((v < -32768.0f) ? -32768 : (int16_t) v);
+        }
+    }
+}
+
 static void
 sound_fdd_thread(UNUSED(void *param))
 {
@@ -1355,6 +1380,7 @@ sound_fdd_thread(UNUSED(void *param))
         static float fdd_float_buffer[SOUNDBUFLEN * 2];
         memset(fdd_float_buffer, 0, sizeof(fdd_float_buffer));
         fdd_audio_callback((int16_t *) fdd_float_buffer, SOUNDBUFLEN * 2);
+        sound_scale_block(fdd_float_buffer, SOUNDBUFLEN * 2, fdd_sound_gain);
         givealbuffer_fdd(fdd_float_buffer, SOUNDBUFLEN * 2);
 
         frames_rendered += SOUNDBUFLEN;
@@ -1434,6 +1460,7 @@ sound_hdd_thread(UNUSED(void *param))
         static float hdd_float_buffer[SOUNDBUFLEN * 2];
         memset(hdd_float_buffer, 0, sizeof(hdd_float_buffer));
         hdd_audio_callback((int16_t *) hdd_float_buffer, SOUNDBUFLEN * 2);
+        sound_scale_block(hdd_float_buffer, SOUNDBUFLEN * 2, hdd_sound_gain);
         givealbuffer_hdd(hdd_float_buffer, SOUNDBUFLEN * 2);
 
         frames_rendered += SOUNDBUFLEN;

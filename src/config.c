@@ -429,6 +429,17 @@ load_general(void)
 
     sound_gain = ini_section_get_int(cat, "sound_gain", 0);
 
+    /* Drive and fan sound levels, percent */
+    fdd_sound_gain   = ini_section_get_int(cat, "fdd_sound_gain", 100);
+    hdd_sound_gain   = ini_section_get_int(cat, "hdd_sound_gain", 100);
+    cdrom_sound_gain = ini_section_get_int(cat, "cdrom_sound_gain", 100);
+    fan_sound_gain   = ini_section_get_int(cat, "fan_sound_gain", 100);
+    {
+        int *gains[] = { &fdd_sound_gain, &hdd_sound_gain, &cdrom_sound_gain, &fan_sound_gain };
+        for (int g = 0; g < 4; g++)
+            *gains[g] = (*gains[g] < 0) ? 0 : ((*gains[g] > 200) ? 200 : *gains[g]);
+    }
+
     kbd_req_capture = ini_section_get_int(cat, "kbd_req_capture", 0);
     hide_status_bar = ini_section_get_int(cat, "hide_status_bar", 0);
     hide_tool_bar   = ini_section_get_int(cat, "hide_tool_bar", 0);
@@ -3709,6 +3720,24 @@ save_general(void)
         ini_section_set_int(cat, "sound_gain", sound_gain);
     else
         ini_section_delete_var(cat, "sound_gain");
+
+    {
+        const struct {
+            const char *key;
+            int         value;
+        } gains[] = {
+            { "fdd_sound_gain", fdd_sound_gain },
+            { "hdd_sound_gain", hdd_sound_gain },
+            { "cdrom_sound_gain", cdrom_sound_gain },
+            { "fan_sound_gain", fan_sound_gain },
+        };
+        for (int g = 0; g < 4; g++) {
+            if (gains[g].value != 100)
+                ini_section_set_int(cat, gains[g].key, gains[g].value);
+            else
+                ini_section_delete_var(cat, gains[g].key);
+        }
+    }
 
     if (kbd_req_capture != 0)
         ini_section_set_int(cat, "kbd_req_capture", kbd_req_capture);

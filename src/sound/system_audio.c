@@ -30,6 +30,7 @@
 #include <86box/ini.h>
 #include <86box/mem.h>
 #include <86box/rom.h>
+#include <86box/sound.h>
 #include <86box/sound_util.h>
 #include <86box/ambient.h>
 #include <86box/hdd_audio.h>
@@ -239,7 +240,8 @@ free_sample(system_audio_sample_t *s)
 static int
 mix_sample(const system_audio_sample_t *s, float *buf, int frames)
 {
-    const float scale = s->volume / 131072.0f; /* full scale -> 0.25, like the drive sounds */
+    /* full scale -> 0.25, like the drive sounds; then the user's fan level */
+    const float scale = s->volume * ((float) fan_sound_gain / 100.0f) / 131072.0f;
     int         n     = s->frames - fan.pos;
 
     if (n > frames)

@@ -60,6 +60,17 @@ extern void            sound_source_close_all(void);
 extern void            sound_source_reopen_all(void);
 
 extern int  sound_gain;
+
+/* (C) Levels of the drive and fan sounds, in percent: 100 = as recorded,
+   0 = silent, up to 200. */
+extern int fdd_sound_gain;
+extern int hdd_sound_gain;
+extern int cdrom_sound_gain;
+extern int fan_sound_gain;
+
+/* Scale a block of `samples` values (float or int16, as sound_is_float
+   says) by `percent`, clamping int16. Does nothing at 100. */
+extern void sound_scale_block(void *buf, int samples, int percent);
 extern char sound_output_device[512]; /* selected audio output device name, empty = system default */
 
 enum {

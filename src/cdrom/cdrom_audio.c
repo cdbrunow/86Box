@@ -41,6 +41,7 @@
 #include <86box/rom.h>
 #include <86box/timer.h>
 #include <86box/cdrom.h>
+#include <86box/sound.h>
 #include <86box/sound_util.h>
 #include <86box/ambient.h>
 #include <86box/cdrom_audio.h>
@@ -277,7 +278,8 @@ free_all_samples(void)
 static int
 mix(const sample_t *s, int *pos, float *buf, int frames)
 {
-    const float scale = s->volume / 131072.0f; /* full scale -> 0.25, like the drive sounds */
+    /* full scale -> 0.25, like the drive sounds; then the user's CD-ROM level */
+    const float scale = s->volume * ((float) cdrom_sound_gain / 100.0f) / 131072.0f;
     int         wait  = 0;
 
     if (*pos < 0) {
