@@ -37,6 +37,9 @@
 #include <86box/hdc_ide.h>
 #include <86box/hdd.h>
 #include <86box/scsi_cdrom.h>
+#ifndef IS_TEST
+#    include <86box/cdrom_audio.h>
+#endif
 #include <86box/ui.h>
 
 #define IDE_ATAPI_IS_EARLY             id->sc->pad0
@@ -5356,6 +5359,9 @@ scsi_cdrom_command(scsi_common_t *sc, const uint8_t *cdb)
             switch (cdb[4] & 3) {
                 case 0: /* Stop the disc. */
                     scsi_cdrom_stop(sc);
+#ifndef IS_TEST
+                    cdrom_audio_stop_unit(dev->drv);
+#endif
                     break;
                 case 1: /* Start the disc and read the TOC. */
                     /*

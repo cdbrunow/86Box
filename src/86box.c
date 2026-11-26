@@ -86,6 +86,7 @@
 #include <86box/hdd_audio.h>
 #include <86box/ambient.h>
 #include <86box/system_audio.h>
+#include <86box/cdrom_audio.h>
 #include <86box/hdc.h>
 #include <86box/hdc_ide.h>
 #include <86box/scsi.h>
@@ -1756,8 +1757,9 @@ pc_init_modules(void)
     hdd_audio_load_profiles();
     hdd_audio_init();
 
-    /* Only the profile list; the fan starts in pc_reset_hard_init() */
+    /* Only the profile lists; the sounds start in pc_reset_hard_init() */
     system_audio_load_profiles();
+    cdrom_audio_load_profiles();
 
     sound_init();
 
@@ -1894,6 +1896,10 @@ void
 pc_reset_hard_close(void)
 {
     ui_sb_set_ready(0);
+
+    /* Silence the CD-ROM drive sounds until cdrom_audio_reset(), so the
+       images being closed and reopened don't play tray sounds */
+    cdrom_audio_close();
 
     /* Close all the memory mappings. */
     mem_close();
@@ -2063,6 +2069,9 @@ pc_reset_hard_init(void)
 
     cdrom_hard_reset();
 
+    /* CD-ROM drive sounds, after the drives and their images are set up */
+    cdrom_audio_reset();
+
     /* Reset the CD-ROM Controller module. */
     cdrom_interface_reset();
 
@@ -2213,6 +2222,7 @@ pc_close(UNUSED(thread_t *ptr))
     fdd_audio_close();
     hdd_audio_close();
     system_audio_close();
+    cdrom_audio_close();
     ambient_close();
 
     sound_close();

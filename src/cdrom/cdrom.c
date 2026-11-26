@@ -59,6 +59,7 @@
 #include <86box/scsi_device.h>
 #include <86box/scsi_cdrom.h>
 #include <86box/sound.h>
+#include <86box/cdrom_audio.h>
 #endif
 #include <86box/ui.h>
 
@@ -1838,6 +1839,10 @@ cdrom_seek(cdrom_t *dev, const uint32_t pos, const uint8_t vendor_type)
 
     dev->seek_pos      = real_pos;
 
+#ifndef IS_TEST
+    cdrom_audio_access(dev, real_pos);
+#endif
+
     dev->cached_sector = -1;
     dev->subc_sector = -1;
 }
@@ -2023,6 +2028,9 @@ cdrom_audio_play(cdrom_t *dev, const uint32_t pos, const uint32_t len, const int
         ret = (dev->ops->get_track_type(dev->local, pos2) == CD_TRACK_AUDIO);
 
         if (ret) {
+#ifndef IS_TEST
+            cdrom_audio_access(dev, pos2);
+#endif
             dev->seek_diff     = ABS(dev->seek_pos - pos2);
             dev->seek_pos      = pos2;
             dev->cd_end        = len2;
@@ -2189,6 +2197,9 @@ cdrom_audio_play_pioneer(cdrom_t *dev, const uint32_t pos)
 
         dev->cd_buflen = 0;
 
+#ifndef IS_TEST
+        cdrom_audio_access(dev, dev->seek_pos);
+#endif
         dev->cd_status = CD_STATUS_PLAYING;
 
         ret = 1;
@@ -2247,6 +2258,9 @@ cdrom_audio_play_toshiba(cdrom_t *dev, const uint32_t pos, const int type)
         if (ret) {
             cdrom_log(dev->log, "Toshiba Play Audio: LBA=%08X.\n", pos2);
 
+#ifndef IS_TEST
+            cdrom_audio_access(dev, dev->seek_pos);
+#endif
             dev->cd_status = CD_STATUS_PLAYING;
             dev->cd_buflen = 0;
         }
@@ -2268,6 +2282,9 @@ cdrom_audio_scan(cdrom_t *dev, const uint32_t pos)
             cdrom_log(dev->log, "(Type 0) Search from current position\n");
             pos2 = dev->seek_pos;
         }
+#ifndef IS_TEST
+        cdrom_audio_access(dev, pos2);
+#endif
         dev->seek_pos = pos2;
 
         /* Do this at this point, since it's at this point that we know the
@@ -3118,6 +3135,11 @@ cdrom_readsector_raw(cdrom_t *dev, uint8_t *buffer, const int sector, const int 
         uint32_t lba    = cdrom_msf_to_lba(sector, ismsf,
                                            old_type, vendor_type);
         int      mode2  = 0;
+
+#ifndef IS_TEST
+        /* Drive sound: spin up, and a seek sound if the head jumped */
+        cdrom_audio_access(dev, lba);
+#endif
 
         *len = 0;
 
@@ -4043,6 +4065,14 @@ cdrom_load(cdrom_t *dev, const char *fn, const int skip_insert)
     cdrom_toc_dump(dev);
 #endif
 
+#ifndef IS_TEST
+    /* Drive sound: the tray closes (host mount, or the guest closing it).
+       Loads during start-up and hard reset are silent: the sounds are off
+       from pc_reset_hard_close() until cdrom_audio_reset(), which runs
+       after cdrom_hard_reset(). */
+    cdrom_audio_tray_close(dev);
+#endif
+
     if (!skip_insert && (dev->cd_status != CD_STATUS_EMPTY) && (dev->cd_status != CD_STATUS_DVD_REJECTED) && (dev->cd_status != CD_STATUS_HDDVD_REJECTED) && (dev->cd_status != CD_STATUS_BLURAY_REJECTED)) {
         /* Signal media change to the emulated machine. */
         cdrom_insert(dev->id);
@@ -4271,6 +4301,11 @@ cdrom_exit(const uint8_t id)
     cdrom_t *dev = &cdrom[id];
 
     strcpy(dev->prev_image_path, dev->image_path);
+
+#ifndef IS_TEST
+    /* Drive sound: the tray opens (this is every way media gets removed) */
+    cdrom_audio_tray_open(dev);
+#endif
 
     dev->cached_sector = -1;
     dev->subc_sector = -1;

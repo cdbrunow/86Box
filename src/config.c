@@ -64,6 +64,7 @@
 #include <86box/hdd.h>
 #include <86box/hdd_audio.h>
 #include <86box/system_audio.h>
+#include <86box/cdrom_audio.h>
 #include <86box/hdc.h>
 #include <86box/hdc_ide.h>
 #include <86box/fdd.h>
@@ -2182,6 +2183,12 @@ load_floppy_and_cdrom_drives(void)
 
         sprintf(temp, "cdrom_%02i_speed", c + 1);
         cdrom[c].speed = ini_section_get_int(cat, temp, 8);
+
+        /* Drive sound: a profile internal_name, "none" for off */
+        sprintf(temp, "cdrom_%02i_audio", c + 1);
+        p = ini_section_get_string(cat, temp, "none");
+        strncpy(cdrom_audio_profile[c], p, sizeof(cdrom_audio_profile[c]) - 1);
+        cdrom_audio_profile[c][sizeof(cdrom_audio_profile[c]) - 1] = '\0';
 
         sprintf(temp, "cdrom_%02i_dvd_speed", c + 1);
         cdrom[c].dvd_speed = ini_section_get_int(cat, temp, 2);
@@ -5126,6 +5133,12 @@ save_floppy_and_cdrom_drives(void)
             ini_section_delete_var(cat, temp);
         else
             ini_section_set_int(cat, temp, cdrom[c].speed);
+
+        sprintf(temp, "cdrom_%02i_audio", c + 1);
+        if ((cdrom[c].bus_type == 0) || !strcmp(cdrom_audio_profile[c], "none"))
+            ini_section_delete_var(cat, temp);
+        else
+            ini_section_set_string(cat, temp, cdrom_audio_profile[c]);
 
         sprintf(temp, "cdrom_%02i_dvd_speed", c + 1);
         if ((cdrom[c].bus_type == 0) || (cdrom[c].dvd_speed == 2) ||
