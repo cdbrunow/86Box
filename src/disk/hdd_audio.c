@@ -456,10 +456,7 @@ hdd_audio_reset(void)
         }
         profile_samples[i].loaded = 0;
     }
-    
-    if (hdd_audio_mutex)
-        thread_release_mutex(hdd_audio_mutex);
-    
+
     /* Find all HDDs with valid audio profiles and initialize their states */
     for (int i = 0; i < HDD_NUM && active_drive_count < HDD_AUDIO_MAX_DRIVES; i++) {
         if (hdd[i].bus_type != HDD_BUS_DISABLED && hdd[i].audio_profile > 0) {
@@ -492,7 +489,11 @@ hdd_audio_reset(void)
     }
     
     hdd_audio_log("HDD Audio Reset: %d active drives with audio\n", active_drive_count);
-    
+
+    /* Release before spinning up: hdd_audio_spinup_drive() takes the lock itself */
+    if (hdd_audio_mutex)
+        thread_release_mutex(hdd_audio_mutex);
+
     /* Start spindle motors for all active drives */
     for (int i = 0; i < active_drive_count; i++) {
         hdd_audio_spinup_drive(drive_states[i].hdd_index);
@@ -922,12 +923,8 @@ hdd_audio_process_drive_float(hdd_audio_drive_state_t *state, float *float_buffe
     }
 
     /* Seek sounds - only play when spindle is running */
-    if (samples->seek_buffer && samples->seek_samples > 0 && 
-        hdd_audio_mutex && state->spindle_state == HDD_SPINDLE_RUNNING) {
-        thread_wait_mutex(hdd_audio_mutex);
+    if (samples->seek_buffer && samples->seek_samples > 0 && state->spindle_state == HDD_SPINDLE_RUNNING)
         hdd_audio_mix_seek_float(state, float_buffer, frames_in_buffer);
-        thread_release_mutex(hdd_audio_mutex);
-    }
 }
 
 /* Process a single drive's audio in int16 mode */
@@ -960,18 +957,24 @@ hdd_audio_process_drive_int16(hdd_audio_drive_state_t *state, int16_t *buffer, i
     }
 
     /* Seek sounds - only play when spindle is running */
-    if (samples->seek_buffer && samples->seek_samples > 0 && 
-        hdd_audio_mutex && state->spindle_state == HDD_SPINDLE_RUNNING) {
-        thread_wait_mutex(hdd_audio_mutex);
+    if (samples->seek_buffer && samples->seek_samples > 0 && state->spindle_state == HDD_SPINDLE_RUNNING)
         hdd_audio_mix_seek_int16(state, buffer, frames_in_buffer);
-        thread_release_mutex(hdd_audio_mutex);
-    }
 }
 
 void
 hdd_audio_callback(int16_t *buffer, int length)
 {
     int frames_in_buffer = length / 2;
+
+    /*
+     * Hold the lock for the whole buffer: the drive list, spindle states and
+     * seek voices are all shared with the emulation thread, which changes
+     * them in hdd_audio_seek(), hdd_audio_spinup/spindown_drive() and
+     * hdd_audio_reset(). Without it a hard reset can rebuild the drive list
+     * (and free the samples) while this loop is reading it.
+     */
+    if (hdd_audio_mutex)
+        thread_wait_mutex(hdd_audio_mutex);
 
     if (sound_is_float) {
         float *float_buffer = (float *) buffer;
@@ -996,4 +999,7 @@ hdd_audio_callback(int16_t *buffer, int length)
             hdd_audio_process_drive_int16(&drive_states[d], buffer, frames_in_buffer);
         }
     }
+
+    if (hdd_audio_mutex)
+        thread_release_mutex(hdd_audio_mutex);
 }
