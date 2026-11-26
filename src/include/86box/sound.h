@@ -195,6 +195,9 @@ extern void sound_fdd_thread_end(void);
 extern void sound_hdd_thread_init(void);
 extern void sound_hdd_thread_end(void);
 
+extern void sound_ambient_thread_init(void);
+extern void sound_ambient_thread_end(void);
+
 extern const char *sound_get_output_devices(void); /* returns double-null-terminated list, or NULL */
 extern const char *sound_get_input_devices(void);  /* returns double-null-terminated list, or NULL */
 extern void        al_capture_open(void);

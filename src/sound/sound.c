@@ -36,6 +36,7 @@
 #include <86box/sound.h>
 #include <86box/fdd_audio.h>
 #include <86box/hdd_audio.h>
+#include <86box/ambient.h>
 #include <86box/mem.h>
 #include <86box/usb.h>
 #include <86box/automation.h>
@@ -149,6 +150,11 @@ static thread_t     *sound_hdd_thread_h = NULL;
 static event_t      *sound_hdd_event = NULL;
 static event_t      *sound_hdd_start_event = NULL;
 static volatile int hddaudioon = 0;
+
+static thread_t    *sound_ambient_thread_h    = NULL;
+static event_t     *sound_ambient_event       = NULL;
+static event_t     *sound_ambient_start_event = NULL;
+static volatile int ambientaudioon            = 0;
 
 static void (*filter_cd_audio)(int channel, double *buffer, void *priv) = NULL;
 static void *filter_cd_audio_p                                          = NULL;
@@ -1478,6 +1484,93 @@ sound_hdd_thread_end(void)
             thread_destroy_event(sound_hdd_start_event);
             sound_hdd_start_event = NULL;
         }
+    }
+}
+
+/*
+ * The ambient sound thread. Same shape as sound_hdd_thread() above: render
+ * a 20 ms block, hand it to the backend, then sleep until it's time for the
+ * next one, measured against the wall clock so the sound keeps real time
+ * whatever the emulation speed. While paused it outputs nothing; the
+ * sources keep their playback positions, so they resume where they left
+ * off. ambient.c starts and stops it as sources come and go.
+ */
+static void
+sound_ambient_thread(UNUSED(void *param))
+{
+    thread_set_event(sound_ambient_start_event);
+    uint32_t start_time      = plat_get_ticks();
+    uint64_t frames_rendered = 0;
+
+    while (ambientaudioon) {
+        if (dopause) {
+            thread_wait_event(sound_ambient_event, 50);
+            thread_reset_event(sound_ambient_event);
+            start_time      = plat_get_ticks();
+            frames_rendered = 0;
+            continue;
+        }
+
+        /* One block at the output rate: 960 frames at 48 kHz, 882 at 44.1 */
+        static float   ambient_float_buffer[SOUNDBUFLEN * 2];
+        static int16_t ambient_int16_buffer[SOUNDBUFLEN * 2];
+        const int      frames = sound_sample_rate / 50;
+
+        ambient_render(ambient_float_buffer, frames);
+
+        if (sound_is_float)
+            givealbuffer_ambient(ambient_float_buffer, frames * 2);
+        else {
+            /* ambient_render() already clamped to -1.0 ... +1.0 */
+            for (int i = 0; i < frames * 2; i++)
+                ambient_int16_buffer[i] = (int16_t) (ambient_float_buffer[i] * 32767.0f);
+            givealbuffer_ambient(ambient_int16_buffer, frames * 2);
+        }
+
+        frames_rendered += frames;
+        uint32_t target_ms = start_time + (uint32_t) ((frames_rendered * 1000ULL) / sound_sample_rate);
+        uint32_t now       = plat_get_ticks();
+        int      wait_ms   = (int) (target_ms - now);
+
+        if (wait_ms > 0) {
+            thread_wait_event(sound_ambient_event, wait_ms);
+            thread_reset_event(sound_ambient_event);
+        } else if (wait_ms < -100) {
+            /* Fell far behind (e.g. the host stalled): don't try to catch up */
+            start_time      = plat_get_ticks();
+            frames_rendered = 0;
+        }
+    }
+}
+
+void
+sound_ambient_thread_init(void)
+{
+    if (!ambientaudioon) {
+        ambientaudioon            = 1;
+        sound_ambient_start_event = thread_create_event();
+        sound_ambient_event       = thread_create_event();
+        sound_ambient_thread_h    = thread_create(sound_ambient_thread, NULL);
+
+        thread_wait_event(sound_ambient_start_event, -1);
+        thread_reset_event(sound_ambient_start_event);
+    }
+}
+
+void
+sound_ambient_thread_end(void)
+{
+    if (ambientaudioon) {
+        ambientaudioon = 0;
+        /* Wake it if it's sleeping, then wait for it to exit */
+        thread_set_event(sound_ambient_event);
+        thread_wait(sound_ambient_thread_h);
+        sound_ambient_thread_h = NULL;
+
+        thread_destroy_event(sound_ambient_event);
+        sound_ambient_event = NULL;
+        thread_destroy_event(sound_ambient_start_event);
+        sound_ambient_start_event = NULL;
     }
 }
 

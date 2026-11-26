@@ -84,6 +84,7 @@
 #include <86box/fdc_ext.h>
 #include <86box/hdd.h>
 #include <86box/hdd_audio.h>
+#include <86box/ambient.h>
 #include <86box/hdc.h>
 #include <86box/hdc_ide.h>
 #include <86box/scsi.h>
@@ -1754,6 +1755,7 @@ pc_init_modules(void)
     hdd_audio_load_profiles();
     hdd_audio_init();
 
+
     sound_init();
 
     hdc_init();
@@ -2202,6 +2204,7 @@ pc_close(UNUSED(thread_t *ptr))
        exit: the spin-down sounds are for power-off, not for closing the VM. */
     fdd_audio_close();
     hdd_audio_close();
+    ambient_close();
 
     sound_close();
 

@@ -87,6 +87,7 @@ add_library(snd OBJECT
     snd_ymf701.c
     snd_ymf71x.c
     sound_util.c
+    ambient.c
 )
 
 # Vendored Musashi 68000 core (Ensoniq Soundscape on-board processor)
