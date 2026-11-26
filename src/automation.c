@@ -1687,7 +1687,8 @@ sb_pause_reasons(strbuf_t *sb, uint32_t mask)
         { RUN_PAUSE_SYNC,    "sync"    },
         { RUN_PAUSE_HOLD,    "hold"    },
         { RUN_PAUSE_DEBUG,   "debug"   },
-        { RUN_PAUSE_SLEEP,   "sleep"   }
+        { RUN_PAUSE_SLEEP,   "sleep"   },
+        { RUN_PAUSE_POWER,   "power"   }
     };
     const char *sep = "";
 
@@ -2172,6 +2173,14 @@ handle_request(char *line)
         return;
     }
 
+    /* Nor while the machine is switched off. */
+    if ((!strcmp(argv[0], "step") || !strcmp(argv[0], "wait") || !strcmp(argv[0], "key")) &&
+        (runctl_pause_reasons() & RUN_PAUSE_POWER)) {
+        respond_error("the machine is powered off; send power on first");
+        complete();
+        return;
+    }
+
     if (!strcmp(argv[0], "status")) {
         int mode = peek_phys(0x449);
         resp.len = 0;
@@ -2192,6 +2201,15 @@ handle_request(char *line)
         sb_printf(&resp, ",\"reasons_back\":");
         sb_pause_reasons(&resp, reasons_back);
         sb_printf(&resp, "}");
+    } else if (!strcmp(argv[0], "power") && (argc == 2) && !strcmp(argv[1], "off")) {
+        /* The power switch: off, with the window left open (commands run on
+           the CPU thread, as pc_power_off_keep_window() needs). */
+        pc_power_off_keep_window();
+        respond_ok_time();
+    } else if (!strcmp(argv[0], "power") && (argc == 2) && !strcmp(argv[1], "on")) {
+        /* Cold boot: the hard reset runs before the next instruction. */
+        pc_power_on();
+        respond_ok_time();
     } else if (!strcmp(argv[0], "wake") && (argc == 1)) {
         /* Wake a guest from an ACPI sleeping state, as the user's Resume does. */
         runctl_resume(RUN_PAUSE_SLEEP);
@@ -2807,6 +2825,8 @@ handle_request(char *line)
     } else if (!strcmp(argv[0], "quit") && (argc == 1)) {
         respond_ok_time();
         complete();
+        /* Exit even if a power-off would normally keep the window open */
+        power_off_force_exit = 1;
         plat_power_off();
         return;
     } else if (!strcmp(argv[0], "quit") && (argc == 2) && !strcmp(argv[1], "soft")) {
@@ -2868,6 +2888,12 @@ automation_quantum(void)
        wakes it, so the command could never end. */
     if (runctl_pause_reasons() & RUN_PAUSE_SLEEP) {
         end_timed_stopped(cmd_is_wait() ? 0 : -1, "sleep");
+        return;
+    }
+
+    /* Likewise when the machine was switched off. */
+    if (runctl_pause_reasons() & RUN_PAUSE_POWER) {
+        end_timed_stopped(cmd_is_wait() ? 0 : -1, "power");
         return;
     }
 

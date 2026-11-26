@@ -55,6 +55,7 @@ typedef enum {
     RUN_PAUSE_HOLD    = 1 << 7, /* automation hold; only under RUN_CLAIM_AUTOMATION */
     RUN_PAUSE_DEBUG   = 1 << 8, /* GDB stub stop (not wired up yet) */
     RUN_PAUSE_SLEEP   = 1 << 9, /* guest entered an ACPI sleeping state; resuming wakes it */
+    RUN_PAUSE_POWER   = 1 << 10, /* machine powered off with the window open; only power-on clears it */
 } run_pause_t;
 
 #define RUN_PAUSE_USER_CLEARABLE (RUN_PAUSE_USER | RUN_PAUSE_DIALOG | RUN_PAUSE_FOCUS | RUN_PAUSE_REMOTE | \

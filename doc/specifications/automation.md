@@ -120,8 +120,9 @@ startup), `frames` (frames rendered) and `held`.
 | `media remove <name>` | Delete a file received with `media put`. |
 | `log [<from> [<max>]]` | What 86Box has written to its log, from position `from` (bytes logged since startup; default 0) on, at most `max` bytes (default and limit 65536), as `text`: the last 64 KB are kept. With `from`, `next` (the `from` for the next read), `pos` (bytes logged so far) and `lost` (bytes asked for that were no longer kept). Includes warnings, which 86Box logs instead of showing them (see [Warnings](#warnings)); a release build logs little else. |
 | `reset hard` / `reset cad` | Hard reset, or send Ctrl+Alt+Del. |
-| `quit soft` | Press the machine's power button, like the GUI "ACPI shutdown" / "Suspend" action; a hard power-off on machines without one. Machine must not be held. |
-| `quit` | Power off and exit 86Box. |
+| `power off` / `power on` | The power switch: off saves the disks and NVR, plays the drives' and fan's spin-downs and leaves the window open, with the machine stopped (`step`, `wait` and `key` fail, and one that is running ends with `"stopped":"power"`); on is a cold boot. |
+| `quit soft` | Press the machine's power button, like the GUI "ACPI shutdown" / "Suspend" action; a hard power-off on machines without one. Machine must not be held. With "Keep window open when powered off" set, the guest's power-off leaves 86Box open, as the GUI does. |
+| `quit` | Power off and exit 86Box (always exits, whatever "Keep window open when powered off" says). |
 
 Numbers accept C syntax (`0x` hex, decimal).
 

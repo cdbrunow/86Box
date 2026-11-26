@@ -220,6 +220,8 @@ int      time_fixed_year                        = 0;              /* (C) fixed y
 int      time_keep_date                         = 0;              /* (C) time sync keeps the guest's own date */
 int      confirm_reset                          = 1;              /* (G) enable reset confirmation */
 int      confirm_exit                           = 1;              /* (G) enable exit confirmation */
+int      power_off_keep_window                  = 0;              /* (G) a guest power-off leaves the window open */
+int      power_off_force_exit                   = 0;              /* the next power-off exits, whatever power_off_keep_window says */
 int      confirm_save                           = 1;              /* (G) enable save confirmation */
 int      chd_precache_level                     = 0;              /* (G) CHD precache level */
 int      fast_forward_new_machines              = 0;              /* (G) New machines start in fast forward */
@@ -2180,6 +2182,53 @@ void
 pc_reset_hard(void)
 {
     hard_reset_pending = 1;
+}
+
+/* The machine is off but 86Box is still open (the power switch, or a guest
+   power-off with power_off_keep_window set). */
+static volatile int powered_off = 0;
+
+int
+pc_is_powered_off(void)
+{
+    return powered_off;
+}
+
+/*
+ * Turn the machine off without closing 86Box. Disk images and the NVR are
+ * saved as on a real power-off, the fan and drives spin down, and the CPU
+ * stops until pc_power_on(). Call it on the CPU thread: devices reach it
+ * through plat_power_off(), and the UI through runctl_call_wait().
+ */
+void
+pc_power_off_keep_window(void)
+{
+    if (powered_off)
+        return;
+    powered_off = 1;
+
+    ide_wait_for_async_reads();
+    hdd_image_sync_all();
+    nvr_save();
+
+    /* The spin-downs keep playing while emulation is paused */
+    (void) system_audio_power_off();
+
+    /* Blocking: the user's Resume can't clear it, only pc_power_on() */
+    runctl_pause(RUN_PAUSE_POWER);
+}
+
+/* Turn the machine back on: a cold boot, with everything spinning up again
+   (pc_reset_hard_init() runs before the CPU executes anything). Any thread. */
+void
+pc_power_on(void)
+{
+    if (!powered_off)
+        return;
+    powered_off = 0;
+
+    pc_reset_hard();
+    runctl_resume(RUN_PAUSE_POWER);
 }
 
 void

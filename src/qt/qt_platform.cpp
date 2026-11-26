@@ -872,6 +872,16 @@ ui_notify(int what)
 void
 plat_power_off(void)
 {
+    /* Keep the window open: the machine just stays off until it's switched
+       back on (Action > Power). Automation's "quit" forces a real exit. */
+    if (power_off_keep_window && !power_off_force_exit) {
+        plat_mouse_capture(0);
+        /* No more instructions in this block */
+        x86_sub_cycles(99999999);
+        pc_power_off_keep_window();
+        return;
+    }
+
     plat_mouse_capture(0);
     plat_clean_up();
     confirm_exit_cmdl = 0;

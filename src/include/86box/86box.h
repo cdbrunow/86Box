@@ -231,6 +231,8 @@ extern int      time_keep_date;             /* (C) time sync keeps the guest's o
 extern int      hdd_format_type;            /* (C) hard disk file format */
 extern int      confirm_reset;              /* (G) enable reset confirmation */
 extern int      confirm_exit;               /* (G) enable exit confirmation */
+extern int      power_off_keep_window;      /* (G) a guest power-off leaves the window open */
+extern int      power_off_force_exit;       /* the next power-off exits, whatever power_off_keep_window says */
 extern int      confirm_save;               /* (G) enable save confirmation */
 extern int      chd_precache_level;         /* (G) CHD precache level */
 extern int      fast_forward_new_machines;  /* (G) New machines start in fast forward */
@@ -316,6 +318,11 @@ extern void pc_close(void *threadid);
 extern void pc_reset_hard_close(void);
 extern void pc_reset_hard_init(void);
 extern void pc_reset_hard(void);
+
+/* Power switch: off keeps the window open; on is a cold boot. */
+extern void pc_power_off_keep_window(void);
+extern void pc_power_on(void);
+extern int  pc_is_powered_off(void);
 extern void pc_full_speed(void);
 extern void pc_speed_changed(void);
 extern void pc_send_cad(void);

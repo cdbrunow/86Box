@@ -191,6 +191,8 @@ load_global_emulator(void)
     confirm_exit  = ini_section_get_int(cat, "confirm_exit", 1);
     confirm_save  = ini_section_get_int(cat, "confirm_save", 1);
 
+    power_off_keep_window = !!ini_section_get_int(cat, "power_off_keep_window", 0);
+
     vmm_disabled = ini_section_get_int(cat, "vmm_disabled", 0);
 
     chd_precache_level = ini_section_get_int(cat, "chd_precache_level", 0);
@@ -3451,6 +3453,11 @@ save_global_emulator(void)
         ini_section_set_int(cat, "confirm_exit", confirm_exit);
     else
         ini_section_delete_var(cat, "confirm_exit");
+
+    if (power_off_keep_window)
+        ini_section_set_int(cat, "power_off_keep_window", power_off_keep_window);
+    else
+        ini_section_delete_var(cat, "power_off_keep_window");
 
     if (confirm_save != 1)
         ini_section_set_int(cat, "confirm_save", confirm_save);
