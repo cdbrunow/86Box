@@ -101,3 +101,57 @@ Run `clang-format` on the lines you change only, not whole files:
 ```sh
 git clang-format    # formats only the lines in your staged changes
 ```
+
+## Building on macOS
+
+Taken from upstream's macOS CI (`.github/workflows/cmake_macos.yml`), which
+builds with Homebrew and Qt 5 on Apple Silicon. Qt 6 also works. The
+`ambient/integration` branch has been built here against both Qt 5.15 and
+Qt 6.4 (on Linux), but not yet on a Mac.
+
+```sh
+xcode-select --install          # compilers, once
+# Homebrew from https://brew.sh, if you don't have it
+
+brew install cmake ninja sdl3 rtmidi openal-soft fluidsynth libslirp vde \
+  libserialport vulkan-headers zstd libarchive qt@5
+
+git clone -b ambient/integration https://github.com/cdbrunow/86Box.git
+git clone -b ambient/integration https://github.com/cdbrunow/assets.git
+git clone --depth 1 https://github.com/cdbrunow/roms.git
+
+cd 86Box
+cmake -S . -B build --preset regular \
+  -D QT=ON -D USE_QT6=OFF \
+  -D Qt5_ROOT="$(brew --prefix qt@5)" \
+  -D Qt5LinguistTools_ROOT="$(brew --prefix qt@5)" \
+  -D OpenAL_ROOT="$(brew --prefix openal-soft)" \
+  -D LIBSERIALPORT_ROOT="$(brew --prefix libserialport)" \
+  -D LibArchive_ROOT="$(brew --prefix libarchive)"
+cmake --build build
+cmake --install build           # makes build/artifacts/86Box.app
+```
+
+For Qt 6, `brew install qt` instead of `qt@5`, and use `-D USE_QT6=ON
+-D Qt6_ROOT="$(brew --prefix qt)" -D Qt6LinguistTools_ROOT="$(brew --prefix qt)"`.
+Upstream CI uses `--preset development` (adds dev-branch devices);
+`regular` is the release configuration.
+
+ROMs and assets: either pass them on the command line,
+
+```sh
+build/artifacts/86Box.app/Contents/MacOS/86Box \
+  --rompath ../roms --assetpath ../assets
+```
+
+or put them where 86Box looks by default (symlinks are fine):
+
+```sh
+mkdir -p ~/Library/Application\ Support/net.86box.86Box
+ln -s "$PWD/../roms"   ~/Library/Application\ Support/net.86box.86Box/roms
+ln -s "$PWD/../assets" ~/Library/Application\ Support/net.86box.86Box/assets
+```
+
+On macOS the Action menu shows two power items: **Power** is the new switch
+(off keeps the window open), and **Power off** is upstream's, which exits
+86Box. Other platforms hide upstream's.
