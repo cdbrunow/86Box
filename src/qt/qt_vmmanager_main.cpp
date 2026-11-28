@@ -711,10 +711,11 @@ VMManagerMain::addNewSystem(const QString &name, const QString &dir, const QStri
         QMessageBox::critical(this, tr("Directory in use"), tr("The selected directory is already in use. Please select a different directory."));
         return;
     }
-    // Create the directory
-    const QDir qmkdir;
-    if (const bool mkdirResult = qmkdir.mkdir(newSystemDirectory.path()); !mkdirResult) {
-        QMessageBox::critical(this, tr("Create directory failed"), tr("Unable to create the directory for the new system"));
+    // Create the directory, and its parents: on a first run the VM manager's
+    // own folder may not exist yet
+    if (const bool mkdirResult = QDir().mkpath(newSystemDirectory.path()); !mkdirResult) {
+        QMessageBox::critical(this, tr("Create directory failed"),
+                              tr("Unable to create the directory for the new system") + QString(":\n%1").arg(QDir::toNativeSeparators(newSystemDirectory.path())));
         return;
     }
     // If specified, write the contents of the configuration file before starting
