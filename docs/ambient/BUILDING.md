@@ -132,6 +132,26 @@ cmake --build build
 cmake --install build           # makes build/artifacts/86Box.app
 ```
 
+**If you also have MacPorts:** CMake may pick MacPorts' `pkg-config`
+(`/opt/local/bin`), which can't see Homebrew's libraries (configure stops at
+"No package 'slirp' found"). Start from an empty `build` folder and use
+Homebrew's:
+
+```sh
+export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig"
+# and add to the cmake line:
+#   -D PKG_CONFIG_EXECUTABLE="$(brew --prefix)/bin/pkg-config"
+```
+
+**If the app is "killed" as soon as it starts:** `cmake --install` copies and
+rewrites the libraries inside the bundle, which breaks their signatures, and
+Apple Silicon refuses to run them. Re-sign it locally (no developer account
+needed):
+
+```sh
+codesign --force --deep --sign - build/artifacts/86Box.app
+```
+
 For Qt 6, `brew install qt` instead of `qt@5`, and use `-D USE_QT6=ON
 -D Qt6_ROOT="$(brew --prefix qt)" -D Qt6LinguistTools_ROOT="$(brew --prefix qt)"`.
 Upstream CI uses `--preset development` (adds dev-branch devices);
@@ -151,6 +171,9 @@ mkdir -p ~/Library/Application\ Support/net.86box.86Box
 ln -s "$PWD/../roms"   ~/Library/Application\ Support/net.86box.86Box/roms
 ln -s "$PWD/../assets" ~/Library/Application\ Support/net.86box.86Box/assets
 ```
+
+On a first run the VM manager's folder doesn't exist yet; the integration
+branch creates it when you add a machine (upstream's VM manager couldn't).
 
 On macOS the Action menu shows two power items: **Power** is the new switch
 (off keeps the window open), and **Power off** is upstream's, which exits
