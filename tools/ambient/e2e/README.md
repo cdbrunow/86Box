@@ -16,6 +16,7 @@ python3 -I power_e2e.py      <86Box> <roms> <assets> <workdir>   # fan + MFM dis
 python3 -I switch_e2e.py     <86Box> <roms> <assets> <workdir>   # power switch, keep-window option
 python3 -I levels_e2e.py     <86Box> <roms> <assets> <workdir>   # fan/HDD level settings (dB change)
 python3 -I modem_level_e2e.py <86Box> <roms> <assets> <workdir>  # modem speaker level (dials via COM1)
+python3 -I openal_output_e2e.py <86Box> <roms> <assets> <workdir> # the fan in the REAL audio output
 ```
 
 Run Qt with `QT_QPA_PLATFORM=offscreen` (the fan and power scripts set it)
@@ -26,6 +27,12 @@ Each prints the commands it ran and then the sounds it found, in order, with
 a correlation `r` (1.000 = the exact sample). A sound that overlaps a louder
 one can score lower or go unmatched, which is why the scripts leave time
 between events.
+
+**Important:** every other script here checks what 86Box *produces*, recorded
+before the audio backend. Only `openal_output_e2e.py` checks what reaches
+the speakers (OpenAL Soft's wave driver). Run it after any change to the
+sound backends: a missing OpenAL source once silenced the fan and CD-ROM
+sounds while every other test passed.
 
 Known emulator behaviour the scripts work around (not sound bugs):
 
