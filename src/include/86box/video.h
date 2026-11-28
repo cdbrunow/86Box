@@ -308,6 +308,8 @@ extern void video_blit_memtoscreen_8(int x, int y, int w, int h);
 extern void video_blend_monitor(int x, int y, int monitor_index);
 extern void video_process_8_monitor(int x, int y, int monitor_index);
 extern void video_blit_memtoscreen_monitor(int x, int y, int w, int h, int monitor_index);
+/* Show a black picture on every monitor, like a screen with the power cut. */
+extern void video_blank_screen(void);
 extern void video_blit_complete_monitor(int monitor_index);
 extern void video_wait_for_blit_monitor(int monitor_index);
 extern void video_wait_for_buffer_monitor(int monitor_index);
