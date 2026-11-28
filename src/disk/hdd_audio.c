@@ -597,7 +597,16 @@ hdd_audio_seek(hard_disk_t *hdd_drive, uint32_t new_cylinder)
 
             drive_state->seek_voices[v].active = 1;
             drive_state->seek_voices[v].position = 0;
-            drive_state->seek_voices[v].volume = use_long ? samples->seek_long_volume : samples->seek_volume;
+            /* Louder the further the heads travel: a one-cylinder step at 0.8,
+               a full stroke at 1.4 (as IBMulator does), so a format's steady
+               stepping stays in the background and long seeks stand out */
+            const uint32_t cylinders = hdd_drive->phy_cyl ? hdd_drive->phy_cyl : hdd_drive->tracks;
+            double         travel    = cylinders ? ((double) cylinder_diff / (double) cylinders) : 0.0;
+            if (travel > 1.0)
+                travel = 1.0;
+            const float distance_gain = (float) (0.8 + 0.6 * travel);
+
+            drive_state->seek_voices[v].volume = (use_long ? samples->seek_long_volume : samples->seek_volume) * distance_gain;
             drive_state->seek_voices[v].profile_id = profile_id;
             drive_state->seek_voices[v].buffer     = use_long ? samples->seek_long_buffer : samples->seek_buffer;
             drive_state->seek_voices[v].samples    = use_long ? samples->seek_long_samples : samples->seek_samples;
