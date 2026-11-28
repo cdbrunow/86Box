@@ -408,10 +408,7 @@ inital(void)
        alGenBuffers(4, buffers[i]);
 
     // Create sources: 0=main, 1=music, 2=wt, 3=cd, 4=fdd, 5=hdd, 6=ym2151, 7=ambient, 8=midi(optional)
-    if (init_midi)
-        alGenSources(8, source);
-    else
-        alGenSources(7, source);
+    alGenSources(sources, source);
 
     for (int i = 0; i < sources; i++) {
         alSource3f(source[i], AL_POSITION, 0.0f, 0.0f, 0.0f);
