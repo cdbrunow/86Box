@@ -463,6 +463,30 @@ video_blit_memtoscreen_monitor(int x, int y, int w, int h, int monitor_index)
     MTR_END("video", "video_blit_memtoscreen");
 }
 
+void
+video_blank_screen(void)
+{
+    for (int i = 0; i < MONITORS_NUM; i++) {
+        monitor_t *mon = &monitors[i];
+
+        if ((mon->target_buffer == NULL) || (mon->mon_blit_data_ptr == NULL) ||
+            (mon->mon_xsize <= 0) || (mon->mon_ysize <= 0))
+            continue;
+
+        /* Don't clear the buffer while the renderer is still copying it */
+        video_wait_for_blit_monitor(i);
+        memset(mon->target_buffer->dat, 0x00,
+               (size_t) mon->target_buffer->w * mon->target_buffer->h * sizeof(uint32_t));
+
+        /* Same area as the card's last frame, so the window keeps its size */
+        const blit_data_t *last = mon->mon_blit_data_ptr;
+        if ((last->w > 0) && (last->h > 0))
+            video_blit_memtoscreen_monitor(last->x, last->y, last->w, last->h, i);
+        else
+            video_blit_memtoscreen_monitor(0, 0, mon->mon_xsize, mon->mon_ysize, i);
+    }
+}
+
 /* Character clocks from the selected HSYNC edge to the next line.
    Pass zero for sync start, or the effective pulse width for sync end. */
 int

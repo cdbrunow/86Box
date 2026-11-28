@@ -2214,6 +2214,9 @@ pc_power_off_keep_window(void)
     /* The spin-downs keep playing while emulation is paused */
     (void) system_audio_power_off();
 
+    /* The monitor goes dark */
+    video_blank_screen();
+
     /* Blocking: the user's Resume can't clear it, only pc_power_on() */
     runctl_pause(RUN_PAUSE_POWER);
 }
